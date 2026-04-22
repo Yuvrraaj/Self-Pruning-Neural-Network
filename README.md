@@ -69,7 +69,7 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 
 ```
 .
-├── notebookd645b4b263.ipynb   # Main solution: Pure MLP self-pruning network
+├── Self Pruning MLP.ipynb   # Main solution: Pure MLP self-pruning network
 ├── with_cnn.ipynb             # Bonus solution: CNN + prunable head, Colab/resume support
 ├── outputs/                   # Auto-generated after running
 │   ├── gate_distribution.png  # Gate histogram (spike at 0 = successful pruning)
@@ -84,7 +84,7 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 
 ## Solution 1: Pure MLP (Main Submission)
 
-**File:** `notebookd645b4b263.ipynb`
+**File:** `Self Pruning MLP.ipynb`
 
 This is the primary, fully self-contained solution. It uses **no CNN, no convolutional layers anywhere**. Every single linear transformation in the network goes through a `PrunableLinear` layer. This is intentionally the harder path — a pure MLP operating on raw CIFAR-10 pixels — because it most cleanly demonstrates the pruning mechanism without any feature extraction shortcut.
 
