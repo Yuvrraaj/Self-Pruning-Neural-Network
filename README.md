@@ -12,7 +12,7 @@
 > These implement a **pure feed-forward MLP** using only custom `PrunableLinear` layers.
 > **NO CNN is used anywhere in the main submission.**
 >
-> The file `Pruning With CNN feature extractor.ipynb` is a **BONUS exploration only** —
+> The file `Bonus Solution.ipynb` is a **BONUS exploration only** —
 > it was built to study the accuracy ceiling with a CNN backbone and is **NOT part of the evaluated submission.**
 
 ## Table of Contents
