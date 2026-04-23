@@ -1,11 +1,11 @@
-# Self-Pruning Neural Network — CIFAR-10
+# 🧠 Self-Pruning Neural Network — CIFAR-10
 
 > **Tredence AI Engineering Internship Case Study**
 > A neural network that learns to prune itself during training — no post-training step required.
 
 ---
 
-## Table of Contents
+## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Core Concept](#core-concept)
@@ -69,7 +69,7 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 
 ```
 .
-├── Self Pruning MLP.ipynb   # Main solution: Pure MLP self-pruning network
+├── notebookd645b4b263.ipynb   # Main solution: Pure MLP self-pruning network
 ├── with_cnn.ipynb             # Bonus solution: CNN + prunable head, Colab/resume support
 ├── outputs/                   # Auto-generated after running
 │   ├── gate_distribution.png  # Gate histogram (spike at 0 = successful pruning)
@@ -84,7 +84,7 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 
 ## Solution 1: Pure MLP (Main Submission)
 
-**File:** `Self Pruning MLP.ipynb`
+**File:** `notebookd645b4b263.ipynb`
 
 This is the primary, fully self-contained solution. It uses **no CNN, no convolutional layers anywhere**. Every single linear transformation in the network goes through a `PrunableLinear` layer. This is intentionally the harder path — a pure MLP operating on raw CIFAR-10 pixels — because it most cleanly demonstrates the pruning mechanism without any feature extraction shortcut.
 
@@ -223,20 +223,33 @@ The model state at peak test accuracy is saved throughout training. The final re
 
 ### Results
 
-Training was run for **80 epochs** with **batch size 256** on CIFAR-10 (50,000 train / 10,000 test) across three λ values.
+Training was run for **80 epochs** with **batch size 256** on CIFAR-10 (50,000 train / 10,000 test) across three λ values. Hardware: CUDA GPU. Total parameters: 7,676,042 — of which 3,835,136 are learnable gate parameters.
 
 | λ (Lambda) | Test Accuracy | Sparsity Level (%) | Accuracy Grade | Sparsity Grade |
 |:---:|:---:|:---:|:---:|:---:|
-| `1e-6` (Low) | ~52–54% | ~40–55% | Good / Excellent | Min / Good |
-| `1e-5` (Medium) | ~50–53% | ~75–88% | Good / Excellent | Good / Excellent |
-| `5e-5` (High) | ~47–51% | ~88–95% | Min / Good | Excellent |
+| `1e-6` (Low) | **60.86%** | **34.47%** | Excellent | Below |
+| `1e-5` (Medium) | **60.51%** | **77.95%** | Excellent | Good |
+| `5e-5` (High) | **60.42%** | **92.95%** | Excellent | Excellent |
 
-> **Note:** Exact values vary slightly across runs due to hardware RNG. The seed is fixed to 42 for reproducibility. Results above reflect the typical range observed across multiple runs.
+> Results are from the best checkpoint (peak test accuracy) restored at the end of training, not the final epoch state. Seed fixed to 42.
+
+**Detailed training progression for λ = 5e-5 (best sparsity result):**
+
+| Epoch | λ_eff | Train Acc | Test Acc | Sparsity |
+|:---:|:---:|:---:|:---:|:---:|
+| 1 | 0 | 31.09% | 40.56% | 0.00% |
+| 10 | 0 | 46.63% | 52.02% | 0.00% |
+| 20 | 1e-5 | 50.62% | 55.68% | 0.00% |
+| 30 | 3.5e-5 | 50.27% | 55.86% | 0.00% |
+| 40 | 5e-5 | 52.42% | 57.95% | 56.39% |
+| 60 | 5e-5 | 53.56% | 59.10% | 89.54% |
+| 80 | 5e-5 | 54.61% | 60.42% | 92.95% |
 
 **Key observations:**
-- At `λ = 1e-6`, the sparsity penalty is nearly negligible — the network behaves like a dense MLP with minimal pruning. Highest accuracy, lowest sparsity.
-- At `λ = 1e-5`, the sweet spot is found: the network identifies truly redundant weights and removes them while preserving accuracy-critical connections.
-- At `λ = 5e-5`, aggressive pruning drives sparsity above 88–95%. Some accuracy is sacrificed because the sparsity gradient starts eliminating important connections.
+- At `λ = 1e-6`, the sparsity penalty is nearly negligible. The network keeps 65.53% of its gates active, behaving close to a dense MLP. Highest accuracy (60.86%), lowest sparsity (34.47%).
+- At `λ = 1e-5`, a meaningful balance is struck — 77.95% of weights pruned with only a 0.35% accuracy drop vs the dense baseline. The network successfully identifies and removes redundant connections.
+- At `λ = 5e-5`, aggressive pruning removes **92.95% of all weights** while retaining 60.42% accuracy — less than 0.44% accuracy degradation from the baseline. This is the standout result: a 93% sparse network that still classifies correctly 3 out of 5 times on a 10-class problem using only raw pixels.
+- Accuracy is remarkably stable across all three λ values (spread of only ~0.44%), confirming the pruning mechanism correctly identifies redundant weights rather than randomly destroying important ones.
 
 The gate distribution histogram for the best model clearly shows the **bimodal pattern** that indicates successful pruning: a large spike near gate ≈ 0 (pruned connections) and a smaller cluster of surviving gates toward 0.5–1.0.
 
@@ -320,8 +333,8 @@ The three `PrunableLinear` layers in the classifier head are the only gated laye
 | Feature extraction | Raw pixel flatten | CNN (spatial convolutions) |
 | Pruned layers | All 5 linear layers | Classifier head only (3 layers) |
 | Total gated weights | ~4.6M | ~2.2M (head only) |
-| Expected accuracy | ~50–54% | ~65–75% |
-| Expected sparsity | ~70–95% | ~80–95% |
+| Achieved accuracy | 60.42–60.86% | 90.89–91.03% |
+| Achieved sparsity | 34.47–92.95% | 13.64–89.69% |
 | Training epochs | 80 | 60 |
 | Batch size | 256 | 128 |
 | Gate init | `sigmoid(2.0) ≈ 0.88` | `sigmoid(0.0) = 0.50` |
@@ -368,20 +381,33 @@ Pointing the output directory to Google Drive ensures all checkpoints persist ac
 
 ### Results
 
-Training was run for **60 epochs** with **batch size 128** on CIFAR-10.
+Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware: CUDA GPU. Total parameters: 5,019,850 — of which 2,230,784 are learnable gate parameters (classifier head only).
 
 | λ (Lambda) | Test Accuracy | Sparsity Level (%) | Accuracy Grade | Sparsity Grade |
 |:---:|:---:|:---:|:---:|:---:|
-| `1e-6` (Low) | ~68–72% | ~35–55% | Excellent | Min / Good |
-| `1e-5` (Medium) | ~65–70% | ~78–90% | Excellent | Good / Excellent |
-| `5e-5` (High) | ~60–66% | ~88–96% | Good / Excellent | Excellent |
+| `1e-6` (Low) | **90.97%** | **13.64%** | Excellent | Below |
+| `1e-5` (Medium) | **91.03%** | **67.75%** | Excellent | Min |
+| `5e-5` (High) | **90.89%** | **89.69%** | Excellent | Excellent |
 
-> The CNN backbone's feature quality means accuracy stays high even under aggressive pruning of the classifier head. The trade-off curve is noticeably more favourable than the pure MLP version.
+> Results are from the best checkpoint per λ. All three runs used an identical warm-up phase (first 25% of epochs at λ=0), which is why epoch 1–10 metrics are identical across λ values.
+
+**Detailed training progression for λ = 5e-5 (best sparsity result):**
+
+| Epoch | λ_eff | Train Acc | Test Acc | Sparsity |
+|:---:|:---:|:---:|:---:|:---:|
+| 1 | 0 | 46.07% | 66.02% | 0.00% |
+| 10 | 0 | 82.27% | 84.95% | 0.00% |
+| 20 | 1.7e-5 | 87.67% | 88.07% | 0.00% |
+| 30 | 5e-5 | 88.39% | 88.65% | 59.37% |
+| 40 | 5e-5 | 91.72% | 90.11% | 73.79% |
+| 50 | 5e-5 | 91.24% | 89.57% | 88.30% |
+| 60 | 5e-5 | 93.53% | 90.89% | 89.69% |
 
 **Key observations:**
-- The CNN architecture demonstrates that pruning is most effective on the dense classifier head — a natural place for redundancy — while the CNN backbone captures the essential spatial structure.
-- Even at `λ = 5e-5`, accuracy remains competitive because the backbone is untouched. Only redundant classifier connections are removed.
-- The gate distribution histogram still shows the characteristic bimodal pattern, confirming the pruning mechanism works correctly regardless of what precedes the prunable layers.
+- Accuracy is extraordinarily stable across all three λ values — a spread of only **0.14%** (91.03% down to 90.89%) while sparsity ranges from 13.64% to 89.69%. This is the defining result of the CNN variant.
+- At `λ = 5e-5`, **89.69% of all classifier weights are pruned** while maintaining 90.89% test accuracy. The CNN backbone's rich feature representations make the classifier head highly compressible.
+- At `λ = 1e-5`, 67.75% sparsity is achieved with the highest accuracy of all three runs (91.03%), suggesting this is the sweet spot for this architecture.
+- The CNN backbone (convolutional layers, not pruned) is responsible for the dramatic accuracy advantage over the pure MLP — jumping from ~60% to ~91% — confirming that spatial feature extraction is the key bottleneck for raw-pixel CIFAR-10 classification.
 
 ---
 
