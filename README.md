@@ -15,6 +15,18 @@
 > The file `Bonus Solution.ipynb` is a **BONUS exploration only** —
 > it was built to study the accuracy ceiling with a CNN backbone and is **NOT part of the evaluated submission.**
 
+## Live Interactive Demo
+
+**Visualize the Self-Pruning Neural Network in action here:**
+
+https://yuvrraaj.github.io/Self-Pruning-Neural-Network/
+
+> Interactive demo showing:
+> - Gate pruning dynamics
+> - Accuracy vs sparsity trade-off
+> - Network evolution during training
+> 
+> Recommended: Open on desktop for best experience
 ## Table of Contents
 
 - [Overview](#overview)
