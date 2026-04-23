@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Self-Pruning Neural Network — Live Demo | Tredence Case Study</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+  .hero { padding: 3rem 2rem 1.5rem; text-align: center; border-bottom: 1px solid #21262d; }
+  .hero h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #58a6ff, #3fb950); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
+  .hero p { color: #8b949e; font-size: 0.95rem; max-width: 600px; margin: 0 auto 0.5rem; }
+  .badge { display: inline-block; background: #1f2937; border: 1px solid #30363d; border-radius: 20px; padding: 3px 12px; font-size: 0.75rem; color: #8b949e; margin: 0.3rem 0.2rem; }
+  .badge.green { border-color: #3fb950; color: #3fb950; }
+  .layout { display: grid; grid-template-columns: 1fr 360px; gap: 0; min-height: calc(100vh - 180px); }
+  .viz-panel { padding: 1.5rem; border-right: 1px solid #21262d; }
+  .ctrl-panel { padding: 1.5rem; background: #161b22; overflow-y: auto; }
+  .section-title { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; margin-bottom: 0.8rem; }
+  #network-canvas { width: 100%; height: 300px; display: block; border: 1px solid #21262d; border-radius: 8px; }
+  #hist-canvas { width: 100%; height: 150px; display: block; }
+  #curve-canvas { width: 100%; height: 130px; display: block; }
+  .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 1rem 0; }
+  .metric-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 0.65rem; text-align: center; }
+  .metric-val { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .metric-val.blue { color: #58a6ff; }
+  .metric-val.green { color: #3fb950; }
+  .metric-val.orange { color: #ffa657; }
+  .metric-val.purple { color: #d2a8ff; }
+  .metric-label { font-size: 0.68rem; color: #8b949e; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
+  input[type=range] { width: 100%; accent-color: #58a6ff; }
+  .btn { width: 100%; padding: 0.65rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; margin-bottom: 0.5rem; }
+  .btn-primary { background: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-primary:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
+  .btn-secondary { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+  .btn-secondary:hover { background: #30363d; color: #e6edf3; }
+  .lambda-tabs { display: flex; gap: 6px; margin-bottom: 1rem; }
+  .ltab { flex: 1; padding: 0.4rem; text-align: center; border-radius: 6px; font-size: 0.78rem; cursor: pointer; border: 1px solid #30363d; background: #0d1117; color: #8b949e; transition: all 0.15s; }
+  .ltab.active { background: #1c3157; border-color: #58a6ff; color: #58a6ff; }
+  .log-box { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; height: 110px; overflow-y: auto; padding: 0.5rem; font-family: monospace; font-size: 0.72rem; color: #8b949e; }
+  .log-box .ep { color: #58a6ff; }
+  .log-box .acc { color: #3fb950; }
+  .log-box .spar { color: #ffa657; }
+  .theory-box { background: #0d1117; border: 1px solid #30363d; border-left: 3px solid #58a6ff; border-radius: 6px; padding: 0.75rem; margin-top: 1rem; font-size: 0.78rem; line-height: 1.6; color: #8b949e; }
+  .theory-box code { background: #21262d; padding: 1px 5px; border-radius: 3px; color: #d2a8ff; font-size: 0.72rem; }
+  .progress-bar-wrap { background: #21262d; border-radius: 4px; height: 5px; margin-top: 0.4rem; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #238636, #3fb950); transition: width 0.3s; border-radius: 4px; }
+  .legend-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 0.5rem; margin-bottom: 1rem; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #8b949e; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .ctrl-group { margin-bottom: 1.2rem; }
+  .ctrl-label { font-size: 0.8rem; color: #8b949e; margin-bottom: 0.35rem; display: flex; justify-content: space-between; }
+  .ctrl-label span { color: #e6edf3; font-weight: 600; }
+  .results-table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
+  .results-table th { text-align: left; padding: 4px; color: #8b949e; border-bottom: 1px solid #21262d; }
+  .results-table td { padding: 5px 4px; border-bottom: 1px solid #21262d; }
+  .github-link { display: block; text-align: center; margin-top: 1rem; padding: 0.5rem; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #58a6ff; text-decoration: none; font-size: 0.8rem; }
+  .github-link:hover { background: #30363d; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    .ctrl-panel { border-top: 1px solid #21262d; }
+    .metrics-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>&#129504; Self-Pruning Neural Network</h1>
+  <p>Tredence AI Engineering Internship — Case Study Interactive Demo</p>
+  <span class="badge green">Pure MLP · No CNN</span>
+  <span class="badge">CIFAR-10 · 10 Classes</span>
+  <span class="badge">PrunableLinear · From Scratch</span>
+  <span class="badge">L1 Sparsity Loss</span>
+</div>
+
+<div class="layout">
+  <div class="viz-panel">
+    <div class="section-title">Network architecture — live gate visualization</div>
+    <canvas id="network-canvas" width="760" height="300"></canvas>
+
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>Active gate (&gt;0.5)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ffa657"></div>Weakening (0.05–0.5)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#30363d"></div>Pruned (&lt;0.01)</div>
+    </div>
+
+    <div class="metrics-row">
+      <div class="metric-card"><div class="metric-val blue" id="m-epoch">0</div><div class="metric-label">Epoch</div></div>
+      <div class="metric-card"><div class="metric-val green" id="m-acc">—</div><div class="metric-label">Test Acc</div></div>
+      <div class="metric-card"><div class="metric-val orange" id="m-spar">0%</div><div class="metric-label">Sparsity</div></div>
+      <div class="metric-card"><div class="metric-val purple" id="m-lambda">—</div><div class="metric-label">&lambda; effective</div></div>
+    </div>
+
+    <div class="section-title">Gate value distribution — histogram</div>
+    <canvas id="hist-canvas" width="760" height="150"></canvas>
+
+    <div class="section-title" style="margin-top:1rem;">Training curves — accuracy &amp; sparsity vs epoch</div>
+    <canvas id="curve-canvas" width="760" height="130"></canvas>
+  </div>
+
+  <div class="ctrl-panel">
+    <div class="section-title">Experiment controls</div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label">Lambda (&lambda;) — pruning pressure <span id="lam-val">1e-5</span></div>
+      <div class="lambda-tabs">
+        <div class="ltab" onclick="setLambda('1e-6', this)">1e-6 Low</div>
+        <div class="ltab active" onclick="setLambda('1e-5', this)">1e-5 Med</div>
+        <div class="ltab" onclick="setLambda('5e-5', this)">5e-5 High</div>
+      </div>
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label">Animation speed <span id="spd-val">Normal</span></div>
+      <input type="range" id="speed-slider" min="1" max="5" value="3" oninput="setSpeed(this.value)">
+    </div>
+
+    <div class="ctrl-group">
+      <div class="ctrl-label">Epochs to simulate <span id="ep-val">80</span></div>
+      <input type="range" id="ep-slider" min="20" max="80" value="80" step="10" oninput="document.getElementById('ep-val').textContent=this.value; maxEpochs=+this.value;">
+    </div>
+
+    <button class="btn btn-primary" id="run-btn" onclick="startSim()">&#9654; Run simulation</button>
+    <button class="btn btn-secondary" onclick="resetSim()">&#8635; Reset</button>
+
+    <div class="ctrl-group" style="margin-top:0.8rem;">
+      <div class="ctrl-label">Progress</div>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+    </div>
+
+    <div class="section-title" style="margin-top:1.2rem;">Training log</div>
+    <div class="log-box" id="log-box"></div>
+
+    <div class="theory-box">
+      <strong style="color:#e6edf3;">How it works</strong><br><br>
+      Each weight gets a learnable gate:<br>
+      <code>gate = sigmoid(gate_score) &isin; (0,1)</code><br>
+      <code>pruned_weight = weight &times; gate</code><br><br>
+      Total loss:<br>
+      <code>L = CrossEntropy + &lambda; &times; &Sigma;(all gates)</code><br><br>
+      The L1 term gives a <em>constant gradient</em> pushing every gate toward 0. A gate stays open only if the classification benefit outweighs &lambda;. Redundant connections are pruned automatically — no post-training step needed.
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <div class="section-title">Actual results — trained on CIFAR-10 (80 epochs)</div>
+      <table class="results-table">
+        <thead><tr><th>&lambda;</th><th style="text-align:right;">Test Acc</th><th style="text-align:right;">Sparsity</th></tr></thead>
+        <tbody>
+          <tr><td style="color:#8b949e;">1e-6 (low)</td><td style="text-align:right;color:#3fb950;">60.86%</td><td style="text-align:right;color:#ffa657;">34.47%</td></tr>
+          <tr><td style="color:#8b949e;">1e-5 (med)</td><td style="text-align:right;color:#3fb950;">60.51%</td><td style="text-align:right;color:#ffa657;">77.95%</td></tr>
+          <tr><td style="color:#8b949e;">5e-5 (high)</td><td style="text-align:right;color:#3fb950;">60.42%</td><td style="text-align:right;color:#ffa657;font-weight:700;">92.95%</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:0.7rem;color:#484f58;margin-top:6px;">Pure MLP on raw pixels. Only 0.44pp accuracy drop while pruning 93% of weights.</p>
+    </div>
+
+    <a class="github-link" href="https://github.com/Yuvrraaj/Self-Pruning-Neural-Network" target="_blank">&#128279; View on GitHub — Full Source Code &amp; Report</a>
+  </div>
+</div>
+
+<script>
+const LAMBDA_PROFILES = {
+  '1e-6': { lam: 1e-6, finalAcc: 60.86, finalSpar: 34.47 },
+  '1e-5': { lam: 1e-5, finalAcc: 60.51, finalSpar: 77.95 },
+  '5e-5': { lam: 5e-5, finalAcc: 60.42, finalSpar: 92.95 }
+};
+
+let currentProfile = LAMBDA_PROFILES['1e-5'];
+let maxEpochs = 80;
+let simInterval = null;
+let currentEpoch = 0;
+let speedMs = 80;
+let accHistory = [], sparHistory = [];
+
+const LAYERS = [
+  { name: 'Input\n3072', vis: 8 },
+  { name: 'FC-1\n1024', vis: 8 },
+  { name: 'FC-2\n512',  vis: 8 },
+  { name: 'FC-3\n256',  vis: 7 },
+  { name: 'FC-4\n128',  vis: 6 },
+  { name: 'Out\n10',    vis: 4 },
+];
+
+let gateHealth = [1,1,1,1,1,1];
+
+function getEffLambda(epoch) {
+  const w = Math.floor(maxEpochs * 0.20), r = Math.floor(maxEpochs * 0.45);
+  if (epoch <= w) return 0;
+  if (epoch <= r) return currentProfile.lam * (epoch - w) / (r - w);
+  return currentProfile.lam;
+}
+
+function interpProgress(epoch) {
+  const t = epoch / maxEpochs;
+  const acc = 0.10 + (currentProfile.finalAcc/100 - 0.10) * (1 / (1 + Math.exp(-8*(t-0.4))));
+  let spar = 0;
+  if (t > 0.20) {
+    const st = (t - 0.20) / 0.80;
+    spar = Math.min(currentProfile.finalSpar/100, (currentProfile.finalSpar/100) * Math.pow(st, 1.8));
+  }
+  return { acc, spar };
+}
+
+function setSpeed(v) {
+  const labels = ['','Slow','Slower','Normal','Fast','Turbo'];
+  document.getElementById('spd-val').textContent = labels[v];
+  speedMs = [0,250,140,80,35,12][v];
+  if (simInterval) { clearInterval(simInterval); simInterval = setInterval(simStep, speedMs); }
+}
+
+function setLambda(key, el) {
+  currentProfile = LAMBDA_PROFILES[key];
+  document.getElementById('lam-val').textContent = key;
+  document.querySelectorAll('.ltab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function startSim() {
+  if (simInterval) return;
+  document.getElementById('run-btn').disabled = true;
+  simInterval = setInterval(simStep, speedMs);
+}
+
+function simStep() {
+  currentEpoch++;
+  if (currentEpoch > maxEpochs) { stopSim(); return; }
+  const { acc, spar } = interpProgress(currentEpoch);
+  const effLam = getEffLambda(currentEpoch);
+  accHistory.push(acc * 100);
+  sparHistory.push(spar * 100);
+  gateHealth = gateHealth.map((g, i) => {
+    const pressure = effLam / 1e-5;
+    return Math.max(0, g - pressure * (1 + i*0.12) * 0.007 * (1 + Math.random()*0.3));
+  });
+  document.getElementById('m-epoch').textContent = currentEpoch;
+  document.getElementById('m-acc').textContent = (acc*100).toFixed(1)+'%';
+  document.getElementById('m-spar').textContent = (spar*100).toFixed(1)+'%';
+  document.getElementById('m-lambda').textContent = effLam > 0 ? effLam.toExponential(0) : '0';
+  document.getElementById('progress-fill').style.width = (currentEpoch/maxEpochs*100)+'%';
+  if (currentEpoch % 10 === 0 || currentEpoch <= 5) addLog(currentEpoch, effLam, acc*100, spar*100);
+  drawNetwork(spar); drawHistogram(spar); drawCurves();
+}
+
+function stopSim() {
+  clearInterval(simInterval); simInterval = null;
+  document.getElementById('run-btn').disabled = false;
+  addLog(currentEpoch, currentProfile.lam, currentProfile.finalAcc, currentProfile.finalSpar, true);
+}
+
+function resetSim() {
+  clearInterval(simInterval); simInterval = null;
+  currentEpoch = 0; accHistory = []; sparHistory = [];
+  gateHealth = [1,1,1,1,1,1];
+  document.getElementById('run-btn').disabled = false;
+  document.getElementById('m-epoch').textContent = '0';
+  document.getElementById('m-acc').textContent = '—';
+  document.getElementById('m-spar').textContent = '0%';
+  document.getElementById('m-lambda').textContent = '—';
+  document.getElementById('progress-fill').style.width = '0%';
+  document.getElementById('log-box').innerHTML = '';
+  drawNetwork(0); drawHistogram(0); drawCurves();
+}
+
+function addLog(ep, lam, acc, spar, final) {
+  const box = document.getElementById('log-box');
+  box.innerHTML += `<div>${final?'&#10003; DONE ':''}<span class="ep">Ep ${ep}</span> &lambda;=${lam>0?lam.toExponential(1):'0'} &rarr; <span class="acc">acc ${acc.toFixed(1)}%</span> <span class="spar">sparse ${spar.toFixed(1)}%</span></div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+function getPhaseLabel() {
+  if (currentEpoch === 0) return 'Ready — press Run to simulate training';
+  const w = Math.floor(maxEpochs*0.20), r = Math.floor(maxEpochs*0.45);
+  if (currentEpoch <= w) return 'Phase 1: Warm-up  (\u03bb = 0, free learning)';
+  if (currentEpoch <= r) return 'Phase 2: Ramp  (\u03bb increasing, pruning starts)';
+  return 'Phase 3: Full pruning pressure active';
+}
+
+function drawNetwork(sparsity) {
+  const canvas = document.getElementById('network-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const n = LAYERS.length;
+  const xPad = 55, xStep = (W - xPad*2) / (n-1);
+
+  for (let li = 0; li < n-1; li++) {
+    const x1 = xPad + li*xStep, x2 = xPad + (li+1)*xStep;
+    const n1 = LAYERS[li].vis, n2 = LAYERS[li+1].vis;
+    const health = gateHealth[li];
+    for (let a = 0; a < n1; a++) {
+      const y1 = H/2 + (a - (n1-1)/2) * (H/(n1+2));
+      for (let b = 0; b < n2; b++) {
+        const y2 = H/2 + (b - (n2-1)/2) * (H/(n2+2));
+        let alpha, col;
+        if (Math.random() > health) { alpha=0.03; col=`rgba(48,54,61,${alpha})`; }
+        else if (health < 0.5) { alpha=0.06+health*0.12; col=`rgba(255,166,87,${alpha})`; }
+        else { alpha=0.05+health*0.1; col=`rgba(63,185,80,${alpha})`; }
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+        ctx.strokeStyle=col; ctx.lineWidth=0.5; ctx.stroke();
+      }
+    }
+  }
+
+  for (let li = 0; li < n; li++) {
+    const x = xPad + li*xStep;
+    const ns = LAYERS[li].vis;
+    const health = gateHealth[li];
+    for (let ni = 0; ni < ns; ni++) {
+      const y = H/2 + (ni - (ns-1)/2) * (H/(ns+2));
+      ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2);
+      ctx.fillStyle = health>0.6?'#3fb950':health>0.2?'#ffa657':'#30363d';
+      ctx.fill(); ctx.strokeStyle='#21262d'; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    const parts = LAYERS[li].name.split('\n');
+    ctx.fillStyle='#8b949e'; ctx.font='10px monospace'; ctx.textAlign='center';
+    ctx.fillText(parts[0], x, H-18);
+    ctx.fillText(parts[1]||'', x, H-6);
+  }
+
+  ctx.fillStyle='#58a6ff'; ctx.font='11px system-ui'; ctx.textAlign='center';
+  ctx.fillText(getPhaseLabel(), W/2, 16);
+}
+
+function drawHistogram(sparsity) {
+  const canvas = document.getElementById('hist-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const pad = {l:38,r:10,t:10,b:28};
+  const cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
+  const bins = 50, counts = new Array(bins).fill(0);
+  const total = 3835136;
+  const pruned = Math.floor(sparsity * total);
+  const active = total - pruned;
+  for (let i=0; i<Math.round(pruned/total*1000); i++) {
+    const v = Math.abs(Math.random()*0.008);
+    counts[Math.min(bins-1, Math.floor(v*bins))] += total/1000;
+  }
+  for (let i=0; i<Math.round(active/total*1000); i++) {
+    const v = 0.3+Math.random()*0.7;
+    counts[Math.min(bins-1, Math.floor(v*bins))] += total/1000;
+  }
+  const mx = Math.max(...counts);
+  ctx.strokeStyle='#21262d'; ctx.lineWidth=0.5;
+  for (let i=0;i<=4;i++){const y=pad.t+cH-(i/4)*cH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();}
+  const bw = cW/bins;
+  for (let i=0;i<bins;i++){
+    const gv=i/bins;
+    ctx.fillStyle=gv<0.01?'#f78166':(gv<0.1?'#ffa657':'#3fb950');
+    const h=(counts[i]/mx)*cH;
+    ctx.fillRect(pad.l+i*bw+0.5, pad.t+cH-h, bw-1, h);
+  }
+  const tx=pad.l+(0.01*bins)*bw;
+  ctx.beginPath();ctx.moveTo(tx,pad.t);ctx.lineTo(tx,pad.t+cH);
+  ctx.strokeStyle='#f78166';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#f78166';ctx.font='9px monospace';ctx.textAlign='left';
+  ctx.fillText('prune threshold 0.01', tx+3, pad.t+11);
+  ctx.fillStyle='#8b949e';ctx.font='9px system-ui';ctx.textAlign='center';
+  for(let i=0;i<=5;i++) ctx.fillText((i*0.2).toFixed(1), pad.l+(i/5)*cW, H-6);
+  ctx.fillStyle='#ffa657';ctx.font='11px system-ui';ctx.textAlign='right';
+  ctx.fillText((sparsity*100).toFixed(1)+'% pruned', W-pad.r, pad.t+14);
+}
+
+function drawCurves() {
+  const canvas = document.getElementById('curve-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const pad={l:40,r:80,t:8,b:22};
+  const cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
+  ctx.strokeStyle='#21262d';ctx.lineWidth=0.5;
+  for(let i=0;i<=4;i++){const y=pad.t+(i/4)*cH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();}
+  const n = accHistory.length;
+  if(n<2) return;
+  ctx.beginPath();ctx.strokeStyle='#3fb950';ctx.lineWidth=2;
+  for(let i=0;i<n;i++){const x=pad.l+(i/maxEpochs)*cW,y=pad.t+cH-(accHistory[i]/100)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  ctx.beginPath();ctx.strokeStyle='#ffa657';ctx.lineWidth=2;
+  for(let i=0;i<n;i++){const x=pad.l+(i/maxEpochs)*cW,y=pad.t+cH-(sparHistory[i]/100)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  const wx=pad.l+(maxEpochs*0.20/maxEpochs)*cW;
+  ctx.fillStyle='rgba(88,166,255,0.05)';ctx.fillRect(pad.l,pad.t,wx-pad.l,cH);
+  ctx.fillStyle='#8b949e';ctx.font='9px system-ui';ctx.textAlign='right';
+  ctx.fillText('100%',pad.l-4,pad.t+8);ctx.fillText('0%',pad.l-4,pad.t+cH);
+  ctx.fillStyle='#3fb950';ctx.font='10px system-ui';ctx.textAlign='left';
+  ctx.fillText('Accuracy',pad.l+cW+8,pad.t+14);
+  ctx.fillStyle='#ffa657';ctx.fillText('Sparsity',pad.l+cW+8,pad.t+28);
+}
+
+drawNetwork(0); drawHistogram(0); drawCurves();
+</script>
+</body>
+</html>
