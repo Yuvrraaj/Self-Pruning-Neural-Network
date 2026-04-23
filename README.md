@@ -43,6 +43,7 @@ Two complete solutions are provided:
 | `train.py` + `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Primary submission — required by assignment** |
 | `Pruning With CNN feature extractor.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready with resume |
 
+> **Note on `train.py`:** The assignment asks for a *"single, well-commented Python script"*. `train.py` is exactly that — a direct, clean conversion of `Self Pruning MLP.ipynb` into a standalone runnable script. Both files contain identical logic; `train.py` is the formal submission artifact.
 ---
 
 ## Core Concept
