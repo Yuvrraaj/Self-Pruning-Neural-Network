@@ -40,8 +40,8 @@ Two complete solutions are provided:
 
 | Notebook | Architecture | Purpose |
 |---|---|---|
-| `notebookd645b4b263.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Main required submission** |
-| `with_cnn.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready |
+| `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Main required submission** |
+| `Pruning With CNN feature extraction.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready |
 
 ---
 
