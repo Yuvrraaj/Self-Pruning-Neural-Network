@@ -37,11 +37,11 @@ This repository contains the solution to the **Self-Pruning Neural Network** cas
 The core mechanism: every weight in the network is multiplied by a learnable **gate**, a scalar in (0, 1) produced by a sigmoid function. An L1 regularisation term on these gates pushes them toward zero. A gate that reaches zero effectively removes its weight from the network — the connection is pruned.
 
 Two complete solutions are provided:
-
-| Notebook | Architecture | Purpose |
+ 
+| File | Architecture | Purpose |
 |---|---|---|
-| `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Main required submission** |
-| `Pruning With CNN feature extractor.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready |
+| `train.py` + `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Primary submission — required by assignment** |
+| `Pruning With CNN feature extractor.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready with resume |
 
 ---
 
