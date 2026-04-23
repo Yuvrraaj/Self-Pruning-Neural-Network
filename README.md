@@ -1,4 +1,4 @@
-# 🧠 Self-Pruning Neural Network — CIFAR-10
+# Self-Pruning Neural Network — CIFAR-10
 
 > **Tredence AI Engineering Internship Case Study**
 > A neural network that learns to prune its own weights during training — no post-training step required.
@@ -7,7 +7,7 @@
 
 ## ⚠️ IMPORTANT — Main Submission Note
 
-> ### 📌 `train.py` and `Self Pruning MLP.ipynb` are the **MAIN SUBMISSION**
+> ### `train.py` and `Self Pruning MLP.ipynb` are the **MAIN SUBMISSION**
 >
 > These implement a **pure feed-forward MLP** using only custom `PrunableLinear` layers.
 > **NO CNN is used anywhere in the main submission.**
