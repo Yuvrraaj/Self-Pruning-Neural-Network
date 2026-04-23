@@ -267,14 +267,14 @@ pip install torch torchvision matplotlib numpy
 The notebook is structured as a Kaggle notebook. To run locally:
 
 ```bash
-jupyter notebook notebookd645b4b263.ipynb
+jupyter notebook Self Pruning MLP.ipynb
 ```
 
 Or convert to a script and run directly:
 
 ```bash
-jupyter nbconvert --to script notebookd645b4b263.ipynb
-python notebookd645b4b263.py
+jupyter nbconvert --to script Self Pruning MLP.ipynb
+python Self Pruning MLP.py
 ```
 
 **Configuration (bottom of notebook):**
@@ -415,7 +415,7 @@ Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware
 
 **On Google Colab (recommended):**
 
-1. Open `with_cnn.ipynb` in Google Colab.
+1. Open `Pruning With CNN feature extractor.ipynb` in Google Colab.
 2. Mount your Google Drive when prompted (for checkpoint persistence):
    ```python
    from google.colab import drive
@@ -432,7 +432,7 @@ Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware
 **Locally:**
 ```bash
 pip install torch torchvision matplotlib numpy
-jupyter notebook with_cnn.ipynb
+jupyter notebook Pruning With CNN feature extractor.ipynb
 ```
 
 Remove the `drive.mount(...)` call at the top and set `output_dir = "./outputs"` in the `run_experiments` call.
