@@ -1,11 +1,11 @@
-# 🧠 Self-Pruning Neural Network — CIFAR-10
+# Self-Pruning Neural Network — CIFAR-10
 
 > **Tredence AI Engineering Internship Case Study**
 > A neural network that learns to prune itself during training — no post-training step required.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Core Concept](#core-concept)
