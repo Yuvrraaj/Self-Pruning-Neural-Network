@@ -295,7 +295,7 @@ CIFAR-10 downloads automatically on first run (~170 MB). All outputs (plots, rep
 
 ## Solution 2: CNN + Prunable Classifier (Bonus)
 
-**File:** `with_cnn.ipynb`
+**File:** `Pruning With CNN feature extractor.ipynb`
 
 This notebook is a **bonus extension** designed for Google Colab. It uses a CNN backbone for feature extraction paired with a `PrunableLinear` classifier head. The pruning mechanism is identical in principle — the same `PrunableLinear` layer, the same L1 sparsity loss — but the CNN's convolutional layers extract spatial features first, giving the prunable head a much richer representation to work with. This results in significantly higher test accuracy compared to the pure MLP.
 
@@ -506,9 +506,6 @@ After running either notebook, the following files are saved to `./outputs/`:
 | `training_curves.png` | Test accuracy and sparsity % vs epoch for all three λ values side-by-side. |
 | `lambda_tradeoff.png` | Scatter plot of accuracy vs sparsity for each λ. The upper-right quadrant (high accuracy + high sparsity) is the target. |
 | `report.md` | Auto-generated Markdown report with theory explanation, results table, and plot references. |
-| `model_lam1e-06.pt` | Best-checkpoint model for λ = 1e-6. |
-| `model_lam1e-05.pt` | Best-checkpoint model for λ = 1e-5. |
-| `model_lam5e-05.pt` | Best-checkpoint model for λ = 5e-5. |
 
 ---
 
