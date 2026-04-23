@@ -297,9 +297,9 @@ CIFAR-10 downloads automatically on first run (~170 MB). All outputs (plots, rep
 
 ---
 
-![Gate Distribution](outputs/gate_distribution.png)
-![Training Curves](outputs/training_curves.png)
-![Lambda Trade-off](outputs/lambda_tradeoff.png)
+![Gate Distribution](Outputs/gate_distribution.png)
+![Training Curves](Outputs/training_curves.png)
+![Lambda Trade-off](Outputs/lambda_tradeoff.png)
 
 ## Solution 2: CNN + Prunable Classifier (Bonus)
 
