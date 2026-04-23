@@ -41,7 +41,7 @@ Two complete solutions are provided:
 | Notebook | Architecture | Purpose |
 |---|---|---|
 | `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Main required submission** |
-| `Pruning With CNN feature extraction.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready |
+| `Pruning With CNN feature extractor.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready |
 
 ---
 
@@ -69,8 +69,8 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 
 ```
 .
-├── notebookd645b4b263.ipynb   # Main solution: Pure MLP self-pruning network
-├── with_cnn.ipynb             # Bonus solution: CNN + prunable head, Colab/resume support
+├── Self Pruning MLP.ipynb   # Main solution: Pure MLP self-pruning network
+├── Pruning With CNN feature extractor.ipynb             # Bonus solution: CNN + prunable head, Colab/resume support
 ├── outputs/                   # Auto-generated after running
 │   ├── gate_distribution.png  # Gate histogram (spike at 0 = successful pruning)
 │   ├── training_curves.png    # Accuracy & sparsity vs epoch for all λ
