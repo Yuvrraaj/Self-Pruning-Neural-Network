@@ -927,6 +927,27 @@
 
       <!-- VIZ 1: GATE ANIMATION -->
       <div class="vp on" id="vp-gate">
+
+        <!-- Model selector pills -->
+        <div style="display:flex;gap:0.7rem;align-items:center;margin-bottom:1.1rem;flex-wrap:wrap;">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--mu);">Visualise:</span>
+          <button class="hpill on" id="anim-mlp-btn" onclick="switchAnim('mlp',this)">
+            MLP &nbsp;λ=1e-05 &nbsp;·&nbsp; BALANCED &nbsp;(60.51% acc, 77.95% sparse)
+          </button>
+          <button class="hpill" id="anim-cnn-btn" onclick="switchAnim('cnn',this)">
+            CNN &nbsp;λ=1e-05 &nbsp;·&nbsp; SWEET SPOT &nbsp;(91.03% acc, 67.75% sparse)
+          </button>
+        </div>
+
+        <!-- Active model badge -->
+        <div id="anim-badge" style="
+          display:inline-block;
+          font-family:var(--mono);font-size:10px;letter-spacing:0.12em;
+          padding:3px 10px;border-radius:2px;margin-bottom:0.85rem;
+          background:var(--green);color:#000;font-weight:700;">
+          MLP · BALANCED
+        </div>
+
         <div class="gbox">
           <div class="glbl">
             NETWORK WEIGHTS — each square is one connection. Blue = active
@@ -946,7 +967,29 @@
             <div class="gstat">Accuracy <b id="acn">40%</b></div>
           </div>
         </div>
-        <p style="
+
+        <!-- Info card shown below animation -->
+        <div id="anim-infocard" style="
+          background:var(--surf);border:1px solid var(--green);border-radius:6px;
+          padding:1.1rem 1.4rem;margin-bottom:1.2rem;display:grid;
+          grid-template-columns:1fr 1fr;gap:0.8rem 2rem;">
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:0.08em;margin-bottom:3px;">FINAL ACCURACY</div>
+            <div id="anim-acc-val" style="font-size:1.6rem;font-weight:800;letter-spacing:-0.03em;color:var(--green)">60.51%</div>
+            <div style="height:3px;background:var(--hint);border-radius:2px;margin-top:5px;overflow:hidden;">
+              <div id="anim-acc-bar" style="height:100%;border-radius:2px;background:var(--green);width:60.51%;transition:width 0.5s ease;"></div>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:0.08em;margin-bottom:3px;">FINAL SPARSITY</div>
+            <div id="anim-spar-val" style="font-size:1.6rem;font-weight:800;letter-spacing:-0.03em;color:var(--green)">77.95%</div>
+            <div style="height:3px;background:var(--hint);border-radius:2px;margin-top:5px;overflow:hidden;">
+              <div id="anim-spar-bar" style="height:100%;border-radius:2px;background:var(--green);width:77.95%;transition:width 0.5s ease;"></div>
+            </div>
+          </div>
+        </div>
+
+        <p id="anim-desc" style="
               font-size: 13px;
               color: var(--mu);
               line-height: 1.7;
@@ -1318,21 +1361,107 @@
       timer = null,
       epoch = 0,
       playing = false;
-    const ED = [
-      { ep: 0, pr: 0, ac: 40 },
-      { ep: 5, pr: 0, ac: 66 },
-      { ep: 10, pr: 0, ac: 82 },
-      { ep: 15, pr: 0, ac: 85 },
-      { ep: 20, pr: 3, ac: 87 },
-      { ep: 25, pr: 10, ac: 88 },
-      { ep: 30, pr: 21, ac: 88 },
-      { ep: 35, pr: 37, ac: 89 },
-      { ep: 40, pr: 44, ac: 90 },
-      { ep: 45, pr: 55, ac: 91 },
-      { ep: 50, pr: 64, ac: 90 },
-      { ep: 55, pr: 66, ac: 91 },
-      { ep: 60, pr: 68, ac: 91 },
-    ];
+
+    /* Epoch data for each model */
+    const ANIM_MODELS = {
+      mlp: {
+        label: "MLP · BALANCED",
+        finalAcc: "60.51%",
+        finalSpar: "77.95%",
+        accW: "60.51",
+        sparW: "77.95",
+        pruneChance: 0.78,        /* 77.95% of cells will be pruned */
+        pruneStartEp: 15,
+        desc: "MLP (pure feed-forward): pruning pressure kicks in at epoch 15. With λ=1e-05 the network removes ~78% of its weights while keeping 60.51% accuracy — the BALANCED operating point.",
+        ed: [
+          { ep: 0,  pr: 0,  ac: 40 },
+          { ep: 5,  pr: 0,  ac: 48 },
+          { ep: 10, pr: 0,  ac: 54 },
+          { ep: 15, pr: 0,  ac: 58 },
+          { ep: 20, pr: 5,  ac: 59 },
+          { ep: 25, pr: 18, ac: 60 },
+          { ep: 30, pr: 35, ac: 60 },
+          { ep: 35, pr: 52, ac: 60 },
+          { ep: 40, pr: 63, ac: 61 },
+          { ep: 45, pr: 70, ac: 61 },
+          { ep: 50, pr: 74, ac: 61 },
+          { ep: 55, pr: 77, ac: 61 },
+          { ep: 60, pr: 78, ac: 61 },
+        ],
+      },
+      cnn: {
+        label: "CNN · SWEET SPOT",
+        finalAcc: "91.03%",
+        finalSpar: "67.75%",
+        accW: "91.03",
+        sparW: "67.75",
+        pruneChance: 0.68,        /* 67.75% of cells will be pruned */
+        pruneStartEp: 15,
+        desc: "CNN (with feature extractor): the backbone gives much richer representations, so the classifier head reaches 91.03% accuracy while pruning 67.75% of the head's weights — the SWEET SPOT.",
+        ed: [
+          { ep: 0,  pr: 0,  ac: 40 },
+          { ep: 5,  pr: 0,  ac: 66 },
+          { ep: 10, pr: 0,  ac: 82 },
+          { ep: 15, pr: 0,  ac: 85 },
+          { ep: 20, pr: 3,  ac: 87 },
+          { ep: 25, pr: 10, ac: 88 },
+          { ep: 30, pr: 21, ac: 88 },
+          { ep: 35, pr: 37, ac: 89 },
+          { ep: 40, pr: 44, ac: 90 },
+          { ep: 45, pr: 55, ac: 91 },
+          { ep: 50, pr: 64, ac: 90 },
+          { ep: 55, pr: 66, ac: 91 },
+          { ep: 60, pr: 68, ac: 91 },
+        ],
+      },
+    };
+
+    let currentAnimModel = "mlp";
+
+    function switchAnim(key, btn) {
+      /* stop any running animation */
+      clearInterval(timer);
+      playing = false;
+      document.getElementById("pbtn").textContent = "PLAY PRUNING";
+      document.getElementById("pbtn").style.background = "#10b981";
+
+      /* update pill active state */
+      document.querySelectorAll("#anim-mlp-btn, #anim-cnn-btn")
+        .forEach(b => b.classList.remove("on"));
+      btn.classList.add("on");
+
+      currentAnimModel = key;
+      const m = ANIM_MODELS[key];
+
+      /* update badge */
+      const badge = document.getElementById("anim-badge");
+      badge.textContent = m.label;
+      badge.style.background = key === "mlp" ? "var(--green)" : "var(--blue)";
+
+      /* update info card */
+      document.getElementById("anim-acc-val").textContent = m.finalAcc;
+      document.getElementById("anim-spar-val").textContent = m.finalSpar;
+      document.getElementById("anim-acc-bar").style.width = m.accW + "%";
+      document.getElementById("anim-spar-bar").style.width = m.sparW + "%";
+      const cardColor = key === "mlp" ? "var(--green)" : "var(--blue)";
+      document.getElementById("anim-acc-val").style.color = cardColor;
+      document.getElementById("anim-spar-val").style.color = cardColor;
+      document.getElementById("anim-acc-bar").style.background = cardColor;
+      document.getElementById("anim-spar-bar").style.background = cardColor;
+      document.getElementById("anim-infocard").style.borderColor =
+        key === "mlp" ? "var(--green)" : "var(--blue)";
+
+      /* update description */
+      document.getElementById("anim-desc").textContent = m.desc;
+
+      /* rebuild grid with new pruneChance and reset */
+      epoch = 0;
+      buildGrid();
+      applyEpoch(0);
+    }
+
+    /* ED is now a getter for the current model */
+    function getED() { return ANIM_MODELS[currentAnimModel].ed; }
 
     function buildGrid() {
       const g = document.getElementById("gg");
@@ -1343,6 +1472,7 @@
       g.style.gridTemplateColumns = `repeat(${COLS},${sz}px)`;
       g.innerHTML = "";
       cells = [];
+      const pc = ANIM_MODELS[currentAnimModel].pruneChance;
       for (let i = 0; i < TOTAL; i++) {
         const d = document.createElement("div");
         d.className = "gc";
@@ -1351,13 +1481,13 @@
         cells.push({
           el: d,
           pruneAt:
-            Math.random() < 0.68 ? Math.floor(Math.random() * 42) + 15 : 999,
+            Math.random() < pc ? Math.floor(Math.random() * 42) + 15 : 999,
         });
       }
     }
 
     function applyEpoch(ep) {
-      const d = ED.reduce((a, b) => (b.ep <= ep ? b : a), ED[0]);
+      const d = getED().reduce((a, b) => (b.ep <= ep ? b : a), getED()[0]);
       document.getElementById("epn").textContent = ep;
       document.getElementById("ppct").textContent = d.pr + "%";
       document.getElementById("acn").textContent = d.ac + "%";
