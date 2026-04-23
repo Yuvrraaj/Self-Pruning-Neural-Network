@@ -257,25 +257,18 @@ The gate distribution histogram for the best model clearly shows the **bimodal p
 ---
 
 ### How to Run
-
-**Dependencies:**
+ 
+**Option A — Script (primary submission artifact):**
+ 
 ```bash
 pip install torch torchvision matplotlib numpy
+python train.py
 ```
-
-**Run on Kaggle (recommended) or locally:**
-
-The notebook is structured as a Kaggle notebook. To run locally:
-
+ 
+**Option B — Notebook:**
+ 
 ```bash
-jupyter notebook Self Pruning MLP.ipynb
-```
-
-Or convert to a script and run directly:
-
-```bash
-jupyter nbconvert --to script Self Pruning MLP.ipynb
-python Self Pruning MLP.py
+jupyter notebook "Self Pruning MLP.ipynb"
 ```
 
 **Configuration (bottom of notebook):**
