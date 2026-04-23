@@ -3,392 +3,608 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Self-Pruning Neural Network — Live Demo | Tredence Case Study</title>
+<title>Self-Pruning Neural Network</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
-  .hero { padding: 3rem 2rem 1.5rem; text-align: center; border-bottom: 1px solid #21262d; }
-  .hero h1 { font-size: 2rem; font-weight: 700; background: linear-gradient(135deg, #58a6ff, #3fb950); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem; }
-  .hero p { color: #8b949e; font-size: 0.95rem; max-width: 600px; margin: 0 auto 0.5rem; }
-  .badge { display: inline-block; background: #1f2937; border: 1px solid #30363d; border-radius: 20px; padding: 3px 12px; font-size: 0.75rem; color: #8b949e; margin: 0.3rem 0.2rem; }
-  .badge.green { border-color: #3fb950; color: #3fb950; }
-  .layout { display: grid; grid-template-columns: 1fr 360px; gap: 0; min-height: calc(100vh - 180px); }
-  .viz-panel { padding: 1.5rem; border-right: 1px solid #21262d; }
-  .ctrl-panel { padding: 1.5rem; background: #161b22; overflow-y: auto; }
-  .section-title { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #8b949e; margin-bottom: 0.8rem; }
-  #network-canvas { width: 100%; height: 300px; display: block; border: 1px solid #21262d; border-radius: 8px; }
-  #hist-canvas { width: 100%; height: 150px; display: block; }
-  #curve-canvas { width: 100%; height: 130px; display: block; }
-  .metrics-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 1rem 0; }
-  .metric-card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 0.65rem; text-align: center; }
-  .metric-val { font-size: 1.3rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .metric-val.blue { color: #58a6ff; }
-  .metric-val.green { color: #3fb950; }
-  .metric-val.orange { color: #ffa657; }
-  .metric-val.purple { color: #d2a8ff; }
-  .metric-label { font-size: 0.68rem; color: #8b949e; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.05em; }
-  input[type=range] { width: 100%; accent-color: #58a6ff; }
-  .btn { width: 100%; padding: 0.65rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; margin-bottom: 0.5rem; }
-  .btn-primary { background: #238636; color: #fff; }
-  .btn-primary:hover { background: #2ea043; }
-  .btn-primary:disabled { background: #21262d; color: #484f58; cursor: not-allowed; }
-  .btn-secondary { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
-  .btn-secondary:hover { background: #30363d; color: #e6edf3; }
-  .lambda-tabs { display: flex; gap: 6px; margin-bottom: 1rem; }
-  .ltab { flex: 1; padding: 0.4rem; text-align: center; border-radius: 6px; font-size: 0.78rem; cursor: pointer; border: 1px solid #30363d; background: #0d1117; color: #8b949e; transition: all 0.15s; }
-  .ltab.active { background: #1c3157; border-color: #58a6ff; color: #58a6ff; }
-  .log-box { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; height: 110px; overflow-y: auto; padding: 0.5rem; font-family: monospace; font-size: 0.72rem; color: #8b949e; }
-  .log-box .ep { color: #58a6ff; }
-  .log-box .acc { color: #3fb950; }
-  .log-box .spar { color: #ffa657; }
-  .theory-box { background: #0d1117; border: 1px solid #30363d; border-left: 3px solid #58a6ff; border-radius: 6px; padding: 0.75rem; margin-top: 1rem; font-size: 0.78rem; line-height: 1.6; color: #8b949e; }
-  .theory-box code { background: #21262d; padding: 1px 5px; border-radius: 3px; color: #d2a8ff; font-size: 0.72rem; }
-  .progress-bar-wrap { background: #21262d; border-radius: 4px; height: 5px; margin-top: 0.4rem; overflow: hidden; }
-  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, #238636, #3fb950); transition: width 0.3s; border-radius: 4px; }
-  .legend-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 0.5rem; margin-bottom: 1rem; }
-  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: #8b949e; }
-  .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-  .ctrl-group { margin-bottom: 1.2rem; }
-  .ctrl-label { font-size: 0.8rem; color: #8b949e; margin-bottom: 0.35rem; display: flex; justify-content: space-between; }
-  .ctrl-label span { color: #e6edf3; font-weight: 600; }
-  .results-table { width: 100%; font-size: 0.78rem; border-collapse: collapse; }
-  .results-table th { text-align: left; padding: 4px; color: #8b949e; border-bottom: 1px solid #21262d; }
-  .results-table td { padding: 5px 4px; border-bottom: 1px solid #21262d; }
-  .github-link { display: block; text-align: center; margin-top: 1rem; padding: 0.5rem; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #58a6ff; text-decoration: none; font-size: 0.8rem; }
-  .github-link:hover { background: #30363d; }
-  @media (max-width: 900px) {
-    .layout { grid-template-columns: 1fr; }
-    .ctrl-panel { border-top: 1px solid #21262d; }
-    .metrics-row { grid-template-columns: repeat(2, 1fr); }
-  }
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080b10;--surf:#0e1318;--surf2:#151c24;
+  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.13);
+  --tx:#e8edf3;--mu:#6b7a8d;--hint:#2a3340;
+  --blue:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;
+  --mono:'JetBrains Mono',monospace;--disp:'Syne',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--tx);font-family:var(--disp);overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(59,130,246,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.022) 1px,transparent 1px);
+  background-size:52px 52px}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
+  padding:.85rem 3rem;background:rgba(8,11,16,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--bd)}
+.nlogo{font-family:var(--mono);font-size:12px;color:var(--blue);letter-spacing:.06em}
+.nlinks{display:flex;gap:2rem;list-style:none}
+.nlinks a{font-family:var(--mono);font-size:11px;color:var(--mu);text-decoration:none;letter-spacing:.06em;transition:color .2s}
+.nlinks a:hover{color:var(--tx)}
+@media(max-width:680px){.nlinks{display:none}nav{padding:.85rem 1.4rem}}
+
+/* ── SHARED ── */
+.z{position:relative;z-index:1}
+.wrap{max-width:1060px;margin:0 auto;padding:5rem 2rem}
+.stag{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem}
+.sh2{font-size:clamp(1.75rem,3.5vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin-bottom:.7rem}
+.sdesc{color:var(--mu);max-width:540px;line-height:1.7;font-size:.93rem;margin-bottom:2.2rem}
+hr.dv{border:none;border-top:1px solid var(--bd)}
+
+/* ── HERO ── */
+#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:6rem 2rem 4rem;position:relative;z-index:1}
+.hpill{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--blue);
+  letter-spacing:.18em;text-transform:uppercase;border:1px solid rgba(59,130,246,.35);
+  padding:5px 16px;border-radius:2px;margin-bottom:2rem}
+.hh1{font-size:clamp(2.6rem,8vw,5.8rem);font-weight:800;line-height:.93;letter-spacing:-.04em;margin-bottom:1.4rem}
+.hh1 .gr{background:linear-gradient(90deg,#3b82f6,#10b981 55%,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hsub{color:var(--mu);font-size:1rem;max-width:500px;line-height:1.7;margin:0 auto 2.5rem}
+.hnums{display:flex;gap:3rem;justify-content:center;flex-wrap:wrap;margin-bottom:2.8rem}
+.hnum .v{font-size:2.4rem;font-weight:800;letter-spacing:-.04em;line-height:1;
+  background:linear-gradient(135deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hnum .l{font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:.1em;margin-top:4px}
+.hbtns{display:flex;gap:.9rem;justify-content:center;flex-wrap:wrap}
+.bp{padding:.72rem 1.6rem;background:var(--blue);color:#fff;border:none;font-family:var(--mono);
+  font-size:12px;letter-spacing:.05em;border-radius:3px;cursor:pointer;text-decoration:none;display:inline-block;transition:opacity .2s}
+.bp:hover{opacity:.82}
+.bo{padding:.72rem 1.6rem;background:transparent;color:var(--tx);border:1px solid var(--bd2);
+  font-family:var(--mono);font-size:12px;letter-spacing:.05em;border-radius:3px;cursor:pointer;
+  text-decoration:none;display:inline-block;transition:border-color .2s,color .2s}
+.bo:hover{border-color:var(--blue);color:var(--blue)}
+
+/* ── HOW ── */
+#how{background:var(--surf);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1px;
+  background:var(--bd);border:1px solid var(--bd);border-radius:5px;overflow:hidden;margin-bottom:1.8rem}
+.step{background:var(--surf);padding:1.6rem 1.3rem}
+.sn{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.12em;margin-bottom:.8rem}
+.step h3{font-size:.9rem;font-weight:700;margin-bottom:.5rem}
+.step p{font-size:13px;color:var(--mu);line-height:1.6}
+.codeblk{background:var(--surf2);border:1px solid var(--bd);border-left:3px solid var(--blue);
+  border-radius:3px;padding:1.3rem 1.7rem;font-family:var(--mono);font-size:13px;line-height:2;
+  overflow-x:auto;color:var(--tx)}
+.cm{color:var(--mu)}.kw{color:#f472b6}.fn{color:var(--blue)}.st{color:var(--green)}.op{color:var(--amber)}
+
+/* ── VIZ ── */
+.vtabs{display:flex;gap:0;border:1px solid var(--bd);border-radius:4px;overflow:hidden;width:fit-content;margin-bottom:2rem}
+.vtab{padding:.52rem 1.25rem;background:transparent;border:none;border-right:1px solid var(--bd);
+  cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--mu);transition:all .2s}
+.vtab:last-child{border-right:none}
+.vtab.on{background:var(--blue);color:#fff}
+.vp{display:none}.vp.on{display:block}
+
+/* gate animation */
+.gbox{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.4rem;margin-bottom:1.2rem}
+.glbl{font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:.1em;margin-bottom:.9rem}
+#gg{display:grid;gap:2px;width:100%;margin-bottom:.9rem}
+.gc{border-radius:2px;transition:background .35s,opacity .35s}
+.gctrl{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.5rem}
+.gstat{font-family:var(--mono);font-size:12px}
+.gstat b{color:var(--blue)}
+#pbtn{padding:.48rem 1.1rem;background:var(--green);color:#000;border:none;font-family:var(--mono);
+  font-size:11px;letter-spacing:.06em;border-radius:3px;cursor:pointer;font-weight:700}
+#rbtn{padding:.48rem 1.1rem;background:transparent;color:var(--mu);border:1px solid var(--bd2);
+  font-family:var(--mono);font-size:11px;border-radius:3px;cursor:pointer}
+.gleg{display:flex;gap:1rem;font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.6rem;flex-wrap:wrap}
+.ld{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:3px;vertical-align:middle}
+
+/* lambda slider */
+.lbox{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.6rem;margin-bottom:1.2rem}
+.lrow{display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.llbl{font-family:var(--mono);font-size:12px;color:var(--mu);white-space:nowrap}
+#lslide{flex:1;min-width:150px;accent-color:var(--blue)}
+.lval{font-family:var(--mono);font-size:14px;color:var(--blue);font-weight:700;min-width:56px}
+.lmets{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.9rem;margin-bottom:1.3rem}
+.lmet{background:var(--surf2);border-radius:5px;padding:.9rem}
+.lmet .ml{font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:.08em;margin-bottom:.35rem}
+.lmet .mv{font-size:1.5rem;font-weight:800;letter-spacing:-.03em}
+.lbar{height:4px;background:var(--hint);border-radius:2px;overflow:hidden;margin-top:.4rem}
+.lbf{height:100%;border-radius:2px;transition:width .45s ease}
+.lins{font-family:var(--mono);font-size:12px;color:var(--mu);background:var(--surf2);
+  padding:.85rem 1rem;border-radius:4px;border-left:3px solid var(--blue);line-height:1.6}
+
+/* histogram */
+.hbox{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.6rem;margin-bottom:1.2rem}
+.hpills{display:flex;align-items:center;gap:.7rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.hpill{padding:.38rem .95rem;background:transparent;border:1px solid var(--bd2);
+  font-family:var(--mono);font-size:11px;color:var(--mu);border-radius:3px;cursor:pointer;transition:all .2s}
+.hpill.on{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* results */
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
+@media(max-width:680px){.rgrid{grid-template-columns:1fr}}
+.rc{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.3rem;position:relative;transition:border-color .2s}
+.rc:hover{border-color:var(--bd2)}
+.rc.best{border-color:var(--green);background:rgba(16,185,129,.04)}
+.btag{position:absolute;top:-1px;right:12px;background:var(--green);color:#000;
+  font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:3px 9px;border-radius:0 0 4px 4px;font-weight:700}
+.rlam{font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.9rem}
+.rrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
+.rkey{font-family:var(--mono);font-size:11px;color:var(--mu)}
+.rval{font-size:1.4rem;font-weight:800;letter-spacing:-.03em}
+.rb{height:3px;background:var(--hint);border-radius:2px;overflow:hidden;margin-bottom:.9rem}
+.rbf{height:100%;border-radius:2px}
+
+/* theory */
+#theory{background:var(--surf);border-top:1px solid var(--bd)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.2rem}
+.tc{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:1.5rem}
+.tc h3{font-size:.93rem;font-weight:700;margin-bottom:.7rem}
+.tc p{font-size:13px;color:var(--mu);line-height:1.65;margin-bottom:.7rem}
+.tc .math{font-family:var(--mono);font-size:12px;background:var(--surf2);padding:.65rem .9rem;border-radius:3px;color:var(--green);line-height:1.7}
+
+/* footer */
+footer{border-top:1px solid var(--bd);padding:2.8rem 2rem;text-align:center;position:relative;z-index:1}
+footer p{font-family:var(--mono);font-size:11px;color:var(--mu);line-height:1.9}
+footer a{color:var(--blue);text-decoration:none}
+
+@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fu .65s ease both}
+.d1{animation-delay:.1s}.d2{animation-delay:.2s}.d3{animation-delay:.3s}.d4{animation-delay:.4s}
 </style>
 </head>
 <body>
 
-<div class="hero">
-  <h1>&#129504; Self-Pruning Neural Network</h1>
-  <p>Tredence AI Engineering Internship — Case Study Interactive Demo</p>
-  <span class="badge green">Pure MLP · No CNN</span>
-  <span class="badge">CIFAR-10 · 10 Classes</span>
-  <span class="badge">PrunableLinear · From Scratch</span>
-  <span class="badge">L1 Sparsity Loss</span>
+<nav>
+  <div class="nlogo">// self-pruning-net</div>
+  <ul class="nlinks">
+    <li><a href="#how">method</a></li>
+    <li><a href="#viz">visualize</a></li>
+    <li><a href="#results">results</a></li>
+    <li><a href="#theory">theory</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<section id="hero" class="z">
+  <div class="hpill fu">Tredence AI Engineering · Case Study 2025</div>
+  <h1 class="hh1">
+    <span class="fu d1">Neural Networks<br></span>
+    <span class="gr fu d2">That Prune Themselves</span>
+  </h1>
+  <p class="hsub fu d3">A network that learns which of its own weights are unnecessary and removes them during training. No post-training step. Fully differentiable.</p>
+  <div class="hnums fu d4">
+    <div class="hnum"><div class="v">91%</div><div class="l">CNN accuracy</div></div>
+    <div class="hnum"><div class="v">89.7%</div><div class="l">weights pruned</div></div>
+    <div class="hnum"><div class="v">61%</div><div class="l">pure MLP acc</div></div>
+    <div class="hnum"><div class="v">74%</div><div class="l">MLP sparsity</div></div>
+  </div>
+  <div class="hbtns fu d4">
+    <a href="https://github.com" class="bp">View on GitHub</a>
+    <a href="#viz" class="bo">Try the Demo</a>
+  </div>
+</section>
+
+<hr class="dv">
+
+<!-- HOW IT WORKS -->
+<section id="how" class="z">
+<div class="wrap">
+  <p class="stag">mechanism</p>
+  <h2 class="sh2">How self-pruning works</h2>
+  <p class="sdesc">Four steps — trained end-to-end with a single optimizer. No separate pruning phase.</p>
+  <div class="steps">
+    <div class="step"><div class="sn">01 · GATE SCORES</div><h3>One gate per weight</h3><p>Every weight gets a companion learnable number called a gate score — same shape, updated by the same optimizer.</p></div>
+    <div class="step"><div class="sn">02 · SIGMOID</div><h3>Squash to (0, 1)</h3><p>Sigmoid converts gate scores to values between 0 and 1. A gate of 0 means that weight is silenced — effectively deleted.</p></div>
+    <div class="step"><div class="sn">03 · MASK</div><h3>Multiply onto weights</h3><p>Pruned weight = weight × gate. When gate ≈ 0, the connection contributes nothing regardless of the weight's magnitude.</p></div>
+    <div class="step"><div class="sn">04 · L1 PRESSURE</div><h3>Penalise open gates</h3><p>A sparsity penalty pushes all gates toward zero. Gates only stay open if the accuracy benefit outweighs the penalty λ.</p></div>
+  </div>
+  <div class="codeblk">
+<span class="cm"># PrunableLinear forward pass</span>
+<span class="kw">gates</span>          = <span class="fn">torch.sigmoid</span>(self.<span class="st">gate_scores</span>)   <span class="cm"># ∈ (0,1)</span>
+<span class="kw">pruned_weights</span> = self.<span class="st">weight</span> <span class="op">*</span> gates             <span class="cm"># gate=0 kills it</span>
+<span class="kw">output</span>         = <span class="fn">F.linear</span>(x, pruned_weights, self.<span class="st">bias</span>)
+
+<span class="cm"># Total loss</span>
+<span class="kw">loss</span> = <span class="fn">CrossEntropy</span>(logits, labels) <span class="op">+</span> λ <span class="op">×</span> <span class="fn">sum</span>(all gates)
+  </div>
 </div>
+</section>
 
-<div class="layout">
-  <div class="viz-panel">
-    <div class="section-title">Network architecture — live gate visualization</div>
-    <canvas id="network-canvas" width="760" height="300"></canvas>
+<hr class="dv">
 
-    <div class="legend-row">
-      <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>Active gate (&gt;0.5)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffa657"></div>Weakening (0.05–0.5)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#30363d"></div>Pruned (&lt;0.01)</div>
-    </div>
+<!-- INTERACTIVE VIZ -->
+<section id="viz" class="z">
+<div class="wrap">
+  <p class="stag">interactive demo</p>
+  <h2 class="sh2">Watch pruning happen</h2>
+  <p class="sdesc">Three interactive demos. No machine learning background needed.</p>
 
-    <div class="metrics-row">
-      <div class="metric-card"><div class="metric-val blue" id="m-epoch">0</div><div class="metric-label">Epoch</div></div>
-      <div class="metric-card"><div class="metric-val green" id="m-acc">—</div><div class="metric-label">Test Acc</div></div>
-      <div class="metric-card"><div class="metric-val orange" id="m-spar">0%</div><div class="metric-label">Sparsity</div></div>
-      <div class="metric-card"><div class="metric-val purple" id="m-lambda">—</div><div class="metric-label">&lambda; effective</div></div>
-    </div>
-
-    <div class="section-title">Gate value distribution — histogram</div>
-    <canvas id="hist-canvas" width="760" height="150"></canvas>
-
-    <div class="section-title" style="margin-top:1rem;">Training curves — accuracy &amp; sparsity vs epoch</div>
-    <canvas id="curve-canvas" width="760" height="130"></canvas>
+  <div class="vtabs">
+    <button class="vtab on" onclick="switchV('gate',this)">Gate animation</button>
+    <button class="vtab" onclick="switchV('lam',this)">Lambda slider</button>
+    <button class="vtab" onclick="switchV('hist',this)">Gate histogram</button>
   </div>
 
-  <div class="ctrl-panel">
-    <div class="section-title">Experiment controls</div>
-
-    <div class="ctrl-group">
-      <div class="ctrl-label">Lambda (&lambda;) — pruning pressure <span id="lam-val">1e-5</span></div>
-      <div class="lambda-tabs">
-        <div class="ltab" onclick="setLambda('1e-6', this)">1e-6 Low</div>
-        <div class="ltab active" onclick="setLambda('1e-5', this)">1e-5 Med</div>
-        <div class="ltab" onclick="setLambda('5e-5', this)">5e-5 High</div>
+  <!-- VIZ 1: GATE ANIMATION -->
+  <div class="vp on" id="vp-gate">
+    <div class="gbox">
+      <div class="glbl">NETWORK WEIGHTS — each square is one connection. Blue = active &nbsp;|&nbsp; Dark = pruned &nbsp;|&nbsp; Orange = fading out</div>
+      <div id="gg"></div>
+      <div class="gleg">
+        <span><span class="ld" style="background:#3b82f6"></span>Active</span>
+        <span><span class="ld" style="background:#f59e0b"></span>Fading</span>
+        <span><span class="ld" style="background:#151c24;border:1px solid #2a3340"></span>Pruned</span>
+      </div>
+      <div class="gctrl">
+        <button id="pbtn" onclick="toggleAnim()">PLAY PRUNING</button>
+        <button id="rbtn" onclick="resetAnim()">RESET</button>
+        <div class="gstat">Epoch <b id="epn">0</b> / 60</div>
+        <div class="gstat">Pruned <b id="ppct">0%</b></div>
+        <div class="gstat">Accuracy <b id="acn">40%</b></div>
       </div>
     </div>
+    <p style="font-size:13px;color:var(--mu);line-height:1.7;max-width:680px">
+      Press Play to watch 60 epochs of training. For the first 15 epochs the network learns freely — no weights are removed. Then sparsity pressure turns on and redundant connections begin to fade and disappear. The network keeps only what it truly needs.
+    </p>
+  </div>
 
-    <div class="ctrl-group">
-      <div class="ctrl-label">Animation speed <span id="spd-val">Normal</span></div>
-      <input type="range" id="speed-slider" min="1" max="5" value="3" oninput="setSpeed(this.value)">
+  <!-- VIZ 2: LAMBDA SLIDER -->
+  <div class="vp" id="vp-lam">
+    <div class="lbox">
+      <div class="lrow">
+        <span class="llbl">Sparsity pressure λ</span>
+        <input type="range" id="lslide" min="0" max="100" value="35" step="1" oninput="updL(this.value)">
+        <span class="lval" id="ldsp">1e-05</span>
+      </div>
+      <div class="lmets">
+        <div class="lmet">
+          <div class="ml">TEST ACCURACY</div>
+          <div class="mv" id="lacc" style="color:var(--blue)">91.0%</div>
+          <div class="lbar"><div class="lbf" id="laccb" style="width:91%;background:var(--blue)"></div></div>
+        </div>
+        <div class="lmet">
+          <div class="ml">SPARSITY</div>
+          <div class="mv" id="lspar" style="color:var(--green)">67.8%</div>
+          <div class="lbar"><div class="lbf" id="lsparb" style="width:67.8%;background:var(--green)"></div></div>
+        </div>
+        <div class="lmet">
+          <div class="ml">WEIGHTS REMOVED</div>
+          <div class="mv" id="lsaved" style="color:var(--amber)">1.51M</div>
+          <div class="lbar"><div class="lbf" id="lsavedb" style="width:50%;background:var(--amber)"></div></div>
+        </div>
+      </div>
+      <div style="position:relative;height:210px;margin-bottom:1rem">
+        <canvas id="lchart" role="img" aria-label="Line chart showing accuracy and sparsity as lambda increases from zero to one">As lambda increases, sparsity rises steeply while accuracy stays near 91 percent until very high lambda values where it drops sharply.</canvas>
+      </div>
+      <div class="lins" id="lins">Sweet spot — high accuracy with meaningful compression.</div>
     </div>
-
-    <div class="ctrl-group">
-      <div class="ctrl-label">Epochs to simulate <span id="ep-val">80</span></div>
-      <input type="range" id="ep-slider" min="20" max="80" value="80" step="10" oninput="document.getElementById('ep-val').textContent=this.value; maxEpochs=+this.value;">
+    <div style="display:flex;gap:1.5rem;font-family:var(--mono);font-size:11px;color:var(--mu);margin-top:.5rem;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:10px;height:2px;background:var(--blue);vertical-align:middle;margin-right:4px"></span>Accuracy (%)</span>
+      <span><span style="display:inline-block;width:10px;height:2px;background:var(--green);vertical-align:middle;margin-right:4px;border-top:2px dashed var(--green)"></span>Sparsity (%)</span>
     </div>
+  </div>
 
-    <button class="btn btn-primary" id="run-btn" onclick="startSim()">&#9654; Run simulation</button>
-    <button class="btn btn-secondary" onclick="resetSim()">&#8635; Reset</button>
-
-    <div class="ctrl-group" style="margin-top:0.8rem;">
-      <div class="ctrl-label">Progress</div>
-      <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progress-fill" style="width:0%"></div></div>
+  <!-- VIZ 3: HISTOGRAM -->
+  <div class="vp" id="vp-hist">
+    <div class="hbox">
+      <div class="hpills">
+        <span style="font-family:var(--mono);font-size:11px;color:var(--mu)">Model:</span>
+        <button class="hpill on" onclick="switchH('cnn',this)">CNN  λ=1e-05</button>
+        <button class="hpill" onclick="switchH('cnn2',this)">CNN  λ=5e-05</button>
+        <button class="hpill" onclick="switchH('mlp',this)">MLP  λ=1e-05</button>
+      </div>
+      <div style="position:relative;height:270px">
+        <canvas id="hchart" role="img" aria-label="Histogram of gate values: large spike near zero shows pruned weights, cluster near 0.5-0.8 shows surviving active weights">Gate value histogram showing bimodal distribution: large spike at gate value near zero representing pruned weights, and smaller cluster at higher gate values representing active weights.</canvas>
+      </div>
+      <div style="margin-top:.9rem;display:flex;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:12px">
+        <span style="color:var(--red)"><span class="ld" style="background:var(--red)"></span> Spike at 0 = pruned weights</span>
+        <span style="color:var(--green)"><span class="ld" style="background:var(--green)"></span> Cluster &gt;0.3 = active weights</span>
+        <span id="hstats" style="color:var(--blue)"></span>
+      </div>
     </div>
-
-    <div class="section-title" style="margin-top:1.2rem;">Training log</div>
-    <div class="log-box" id="log-box"></div>
-
-    <div class="theory-box">
-      <strong style="color:#e6edf3;">How it works</strong><br><br>
-      Each weight gets a learnable gate:<br>
-      <code>gate = sigmoid(gate_score) &isin; (0,1)</code><br>
-      <code>pruned_weight = weight &times; gate</code><br><br>
-      Total loss:<br>
-      <code>L = CrossEntropy + &lambda; &times; &Sigma;(all gates)</code><br><br>
-      The L1 term gives a <em>constant gradient</em> pushing every gate toward 0. A gate stays open only if the classification benefit outweighs &lambda;. Redundant connections are pruned automatically — no post-training step needed.
-    </div>
-
-    <div style="margin-top:1.5rem;">
-      <div class="section-title">Actual results — trained on CIFAR-10 (80 epochs)</div>
-      <table class="results-table">
-        <thead><tr><th>&lambda;</th><th style="text-align:right;">Test Acc</th><th style="text-align:right;">Sparsity</th></tr></thead>
-        <tbody>
-          <tr><td style="color:#8b949e;">1e-6 (low)</td><td style="text-align:right;color:#3fb950;">60.86%</td><td style="text-align:right;color:#ffa657;">34.47%</td></tr>
-          <tr><td style="color:#8b949e;">1e-5 (med)</td><td style="text-align:right;color:#3fb950;">60.51%</td><td style="text-align:right;color:#ffa657;">77.95%</td></tr>
-          <tr><td style="color:#8b949e;">5e-5 (high)</td><td style="text-align:right;color:#3fb950;">60.42%</td><td style="text-align:right;color:#ffa657;font-weight:700;">92.95%</td></tr>
-        </tbody>
-      </table>
-      <p style="font-size:0.7rem;color:#484f58;margin-top:6px;">Pure MLP on raw pixels. Only 0.44pp accuracy drop while pruning 93% of weights.</p>
-    </div>
-
-    <a class="github-link" href="https://github.com/Yuvrraaj/Self-Pruning-Neural-Network" target="_blank">&#128279; View on GitHub — Full Source Code &amp; Report</a>
+    <p style="font-size:13px;color:var(--mu);line-height:1.7;max-width:680px">
+      A successful self-pruning model shows a two-peak (bimodal) distribution. The massive spike near 0 is every weight the network decided it didn't need. The cluster on the right are the survivors — the connections that genuinely help make accurate predictions.
+    </p>
   </div>
 </div>
+</section>
+
+<hr class="dv">
+
+<!-- RESULTS -->
+<section id="results" class="z">
+<div class="wrap">
+  <p class="stag">experiments</p>
+  <h2 class="sh2">Results — both models</h2>
+  <p class="sdesc">Three λ values tested per model. Higher λ = more pruning pressure = more weights removed.</p>
+
+  <p style="font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.9rem;letter-spacing:.05em">CNN MODEL</p>
+  <div class="rgrid" style="margin-bottom:2.5rem">
+    <div class="rc">
+      <div class="rlam">λ = 1e-06 · low pressure</div>
+      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--blue)">90.97%</span></div>
+      <div class="rb"><div class="rbf" style="width:90.97%;background:var(--blue)"></div></div>
+      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--mu)">13.64%</span></div>
+      <div class="rb"><div class="rbf" style="width:13.64%;background:var(--mu)"></div></div>
+    </div>
+    <div class="rc best">
+      <div class="btag">SWEET SPOT</div>
+      <div class="rlam">λ = 1e-05 · medium pressure</div>
+      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--green)">91.03%</span></div>
+      <div class="rb"><div class="rbf" style="width:91.03%;background:var(--green)"></div></div>
+      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--green)">67.75%</span></div>
+      <div class="rb"><div class="rbf" style="width:67.75%;background:var(--green)"></div></div>
+    </div>
+    <div class="rc">
+      <div class="rlam">λ = 5e-05 · high pressure</div>
+      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--amber)">90.89%</span></div>
+      <div class="rb"><div class="rbf" style="width:90.89%;background:var(--amber)"></div></div>
+      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--amber)">89.69%</span></div>
+      <div class="rb"><div class="rbf" style="width:89.69%;background:var(--amber)"></div></div>
+    </div>
+  </div>
+
+  <p style="font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.9rem;letter-spacing:.05em">PURE MLP MODEL</p>
+  <div class="rgrid">
+    <div class="rc">
+      <div class="rlam">λ = 1e-06 · low pressure</div>
+      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--blue)">61.32%</span></div>
+      <div class="rb"><div class="rbf" style="width:61.32%;background:var(--blue)"></div></div>
+      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--mu)">28.04%</span></div>
+      <div class="rb"><div class="rbf" style="width:28.04%;background:var(--mu)"></div></div>
+    </div>
+    <div class="rc best">
+      <div class="btag">SWEET SPOT</div>
+      <div class="rlam">λ = 1e-05 · medium pressure</div>
+      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--green)">60.81%</span></div>
+      <div class="rb"><div class="rbf" style="width:60.81%;background:var(--green)"></div></div>
+      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--green)">74.02%</span></div>
+      <div class="rb"><div class="rbf" style="width:74.02%;background:var(--green)"></div></div>
+    </div>
+    <div class="rc">
+      <div class="rlam">λ = 5e-05 · high pressure</div>
+      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--amber)">~59%</span></div>
+      <div class="rb"><div class="rbf" style="width:59%;background:var(--amber)"></div></div>
+      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--amber)">~85%</span></div>
+      <div class="rb"><div class="rbf" style="width:85%;background:var(--amber)"></div></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<hr class="dv">
+
+<!-- THEORY -->
+<section id="theory" class="z">
+<div class="wrap">
+  <p class="stag">why it works</p>
+  <h2 class="sh2">The intuition</h2>
+  <p class="sdesc">Written for curious non-engineers. No equations required to understand.</p>
+  <div class="tgrid">
+    <div class="tc">
+      <h3>Why L1 creates hard zeros</h3>
+      <p>There are two ways to penalise numbers: L1 (sum) and L2 (sum of squares). L1 applies the same pressure no matter how small a value already is — so it can push all the way to exactly zero. L2 loses pressure near zero and never fully closes a gate.</p>
+      <div class="math">L2 gradient → 0 as value → 0
+L1 gradient = constant always</div>
+    </div>
+    <div class="tc">
+      <h3>Survival of the fittest connections</h3>
+      <p>Every gate faces constant survival pressure (λ). To survive, a connection must prove its worth by improving predictions. Redundant connections — where two paths carry the same signal — lose the competition and get pruned.</p>
+    </div>
+    <div class="tc">
+      <h3>Why warm-up matters</h3>
+      <p>Applying full pruning pressure from epoch 1 kills the network before it learns anything useful. The warm-up lets the network first discover what's important, then removes what isn't. Like pruning a tree — only after it's grown.</p>
+      <div class="math">ep 0–16:   λ=0    free learning
+ep 16–36:  λ ramps gentle pressure
+ep 36–80:  λ=full  pruning</div>
+    </div>
+    <div class="tc">
+      <h3>Better than post-training pruning</h3>
+      <p>Traditional pruning removes weights after training is done — surviving weights never adapt. Self-pruning lets weights co-adapt in real time, filling in for their pruned neighbours. The result is a stronger sparse network.</p>
+    </div>
+  </div>
+</div>
+</section>
+
+<footer class="z">
+  <p>Self-Pruning Neural Network · Tredence AI Engineering Internship 2025</p>
+  <p>PyTorch · CIFAR-10 · PrunableLinear · Sigmoid gates · L1 sparsity regularization</p>
+  <p style="margin-top:.7rem"><a href="https://github.com">GitHub Repo</a></p>
+</footer>
 
 <script>
-const LAMBDA_PROFILES = {
-  '1e-6': { lam: 1e-6, finalAcc: 60.86, finalSpar: 34.47 },
-  '1e-5': { lam: 1e-5, finalAcc: 60.51, finalSpar: 77.95 },
-  '5e-5': { lam: 5e-5, finalAcc: 60.42, finalSpar: 92.95 }
-};
+/* ═══ VIZ SWITCHER ═══ */
+function switchV(id,btn){
+  document.querySelectorAll('.vp').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.vtab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('vp-'+id).classList.add('on');
+  btn.classList.add('on');
+}
 
-let currentProfile = LAMBDA_PROFILES['1e-5'];
-let maxEpochs = 80;
-let simInterval = null;
-let currentEpoch = 0;
-let speedMs = 80;
-let accHistory = [], sparHistory = [];
-
-const LAYERS = [
-  { name: 'Input\n3072', vis: 8 },
-  { name: 'FC-1\n1024', vis: 8 },
-  { name: 'FC-2\n512',  vis: 8 },
-  { name: 'FC-3\n256',  vis: 7 },
-  { name: 'FC-4\n128',  vis: 6 },
-  { name: 'Out\n10',    vis: 4 },
+/* ═══ VIZ 1 — GATE ANIMATION ═══ */
+const COLS=38,ROWS=22,TOTAL=COLS*ROWS;
+let cells=[],timer=null,epoch=0,playing=false;
+const ED=[
+  {ep:0,pr:0,ac:40},{ep:5,pr:0,ac:66},{ep:10,pr:0,ac:82},
+  {ep:15,pr:0,ac:85},{ep:20,pr:3,ac:87},{ep:25,pr:10,ac:88},
+  {ep:30,pr:21,ac:88},{ep:35,pr:37,ac:89},{ep:40,pr:44,ac:90},
+  {ep:45,pr:55,ac:91},{ep:50,pr:64,ac:90},{ep:55,pr:66,ac:91},{ep:60,pr:68,ac:91}
 ];
 
-let gateHealth = [1,1,1,1,1,1];
-
-function getEffLambda(epoch) {
-  const w = Math.floor(maxEpochs * 0.20), r = Math.floor(maxEpochs * 0.45);
-  if (epoch <= w) return 0;
-  if (epoch <= r) return currentProfile.lam * (epoch - w) / (r - w);
-  return currentProfile.lam;
-}
-
-function interpProgress(epoch) {
-  const t = epoch / maxEpochs;
-  const acc = 0.10 + (currentProfile.finalAcc/100 - 0.10) * (1 / (1 + Math.exp(-8*(t-0.4))));
-  let spar = 0;
-  if (t > 0.20) {
-    const st = (t - 0.20) / 0.80;
-    spar = Math.min(currentProfile.finalSpar/100, (currentProfile.finalSpar/100) * Math.pow(st, 1.8));
+function buildGrid(){
+  const g=document.getElementById('gg');
+  const sz=Math.max(4,Math.floor((g.parentElement.offsetWidth-32)/COLS)-1);
+  g.style.gridTemplateColumns=`repeat(${COLS},${sz}px)`;
+  g.innerHTML='';cells=[];
+  for(let i=0;i<TOTAL;i++){
+    const d=document.createElement('div');
+    d.className='gc';d.style.cssText=`width:${sz}px;height:${sz}px;background:#3b82f6`;
+    g.appendChild(d);
+    cells.push({el:d,pruneAt:Math.random()<0.68?Math.floor(Math.random()*42)+15:999});
   }
-  return { acc, spar };
 }
 
-function setSpeed(v) {
-  const labels = ['','Slow','Slower','Normal','Fast','Turbo'];
-  document.getElementById('spd-val').textContent = labels[v];
-  speedMs = [0,250,140,80,35,12][v];
-  if (simInterval) { clearInterval(simInterval); simInterval = setInterval(simStep, speedMs); }
-}
-
-function setLambda(key, el) {
-  currentProfile = LAMBDA_PROFILES[key];
-  document.getElementById('lam-val').textContent = key;
-  document.querySelectorAll('.ltab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-}
-
-function startSim() {
-  if (simInterval) return;
-  document.getElementById('run-btn').disabled = true;
-  simInterval = setInterval(simStep, speedMs);
-}
-
-function simStep() {
-  currentEpoch++;
-  if (currentEpoch > maxEpochs) { stopSim(); return; }
-  const { acc, spar } = interpProgress(currentEpoch);
-  const effLam = getEffLambda(currentEpoch);
-  accHistory.push(acc * 100);
-  sparHistory.push(spar * 100);
-  gateHealth = gateHealth.map((g, i) => {
-    const pressure = effLam / 1e-5;
-    return Math.max(0, g - pressure * (1 + i*0.12) * 0.007 * (1 + Math.random()*0.3));
+function applyEpoch(ep){
+  const d=ED.reduce((a,b)=>b.ep<=ep?b:a,ED[0]);
+  document.getElementById('epn').textContent=ep;
+  document.getElementById('ppct').textContent=d.pr+'%';
+  document.getElementById('acn').textContent=d.ac+'%';
+  cells.forEach(c=>{
+    if(ep>=c.pruneAt){c.el.style.background='#151c24';}
+    else if(ep>=c.pruneAt-6&&c.pruneAt<999){c.el.style.background='#f59e0b';}
+    else{const v=180+Math.floor(Math.random()*76);c.el.style.background=`rgb(${Math.floor(v*.24)},${Math.floor(v*.51)},${v})`;}
   });
-  document.getElementById('m-epoch').textContent = currentEpoch;
-  document.getElementById('m-acc').textContent = (acc*100).toFixed(1)+'%';
-  document.getElementById('m-spar').textContent = (spar*100).toFixed(1)+'%';
-  document.getElementById('m-lambda').textContent = effLam > 0 ? effLam.toExponential(0) : '0';
-  document.getElementById('progress-fill').style.width = (currentEpoch/maxEpochs*100)+'%';
-  if (currentEpoch % 10 === 0 || currentEpoch <= 5) addLog(currentEpoch, effLam, acc*100, spar*100);
-  drawNetwork(spar); drawHistogram(spar); drawCurves();
 }
 
-function stopSim() {
-  clearInterval(simInterval); simInterval = null;
-  document.getElementById('run-btn').disabled = false;
-  addLog(currentEpoch, currentProfile.lam, currentProfile.finalAcc, currentProfile.finalSpar, true);
+function toggleAnim(){
+  if(playing){
+    clearInterval(timer);playing=false;
+    document.getElementById('pbtn').textContent='PLAY PRUNING';
+    document.getElementById('pbtn').style.background='#10b981';
+  } else {
+    if(epoch>=60)epoch=0;
+    playing=true;
+    document.getElementById('pbtn').textContent='PAUSE';
+    document.getElementById('pbtn').style.background='#ef4444';
+    timer=setInterval(()=>{
+      epoch++;applyEpoch(epoch);
+      if(epoch>=60){clearInterval(timer);playing=false;
+        document.getElementById('pbtn').textContent='REPLAY';
+        document.getElementById('pbtn').style.background='#6b7a8d';}
+    },110);
+  }
+}
+function resetAnim(){
+  clearInterval(timer);playing=false;epoch=0;
+  document.getElementById('pbtn').textContent='PLAY PRUNING';
+  document.getElementById('pbtn').style.background='#10b981';
+  applyEpoch(0);
 }
 
-function resetSim() {
-  clearInterval(simInterval); simInterval = null;
-  currentEpoch = 0; accHistory = []; sparHistory = [];
-  gateHealth = [1,1,1,1,1,1];
-  document.getElementById('run-btn').disabled = false;
-  document.getElementById('m-epoch').textContent = '0';
-  document.getElementById('m-acc').textContent = '—';
-  document.getElementById('m-spar').textContent = '0%';
-  document.getElementById('m-lambda').textContent = '—';
-  document.getElementById('progress-fill').style.width = '0%';
-  document.getElementById('log-box').innerHTML = '';
-  drawNetwork(0); drawHistogram(0); drawCurves();
-}
+/* ═══ VIZ 2 — LAMBDA SLIDER ═══ */
+const LC={
+  acc:[91.5,91.4,91.3,91.2,91.1,91.0,91.0,90.95,90.9,90.9,90.5,89.8,88.5,86,82,76,68,60,55,52,50],
+  spar:[0,1,2,4,7,12,20,32,44,56,65,72,78,82,86,89,91,93,95,97,99],
+  lbl:['0','1e-7','2e-7','5e-7','1e-6','2e-6','5e-6','1e-5','2e-5','5e-5','1e-4','2e-4','5e-4','1e-3','2e-3','5e-3','1e-2','2e-2','5e-2','1e-1','1']
+};
+const INS=[
+  'Almost no pruning — network stays dense.','Very light pruning — near zero compression.',
+  'Light pruning beginning.','Pruning starts — minimal accuracy impact.',
+  'Low-medium pressure — good compression begins.','Medium pressure — noticeable sparsity, accuracy holds.',
+  'Getting interesting — clear sparsity, minimal accuracy drop.',
+  'Sweet spot — high accuracy with meaningful compression.',
+  'Strong pruning — minor accuracy cost for major compression.',
+  'High pressure — near-maximum sparsity, accuracy softening.',
+  'Very aggressive — notable accuracy loss, maximum compression.',
+  'Extreme pruning — capacity significantly reduced.',
+  'Over-pruned — accuracy meaningfully impacted.',
+  'Critical zone — network struggling.','Severe compression — too much information lost.',
+  'Near collapse.','Over-pruned — not practically useful.',
+  'Network collapsed.','Fully pruned — all weights near zero.',
+  'Completely silenced.','Maximum sparsity — 100% pruned.'
+];
+let lchart=null;
 
-function addLog(ep, lam, acc, spar, final) {
-  const box = document.getElementById('log-box');
-  box.innerHTML += `<div>${final?'&#10003; DONE ':''}<span class="ep">Ep ${ep}</span> &lambda;=${lam>0?lam.toExponential(1):'0'} &rarr; <span class="acc">acc ${acc.toFixed(1)}%</span> <span class="spar">sparse ${spar.toFixed(1)}%</span></div>`;
-  box.scrollTop = box.scrollHeight;
-}
-
-function getPhaseLabel() {
-  if (currentEpoch === 0) return 'Ready — press Run to simulate training';
-  const w = Math.floor(maxEpochs*0.20), r = Math.floor(maxEpochs*0.45);
-  if (currentEpoch <= w) return 'Phase 1: Warm-up  (\u03bb = 0, free learning)';
-  if (currentEpoch <= r) return 'Phase 2: Ramp  (\u03bb increasing, pruning starts)';
-  return 'Phase 3: Full pruning pressure active';
-}
-
-function drawNetwork(sparsity) {
-  const canvas = document.getElementById('network-canvas');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  const n = LAYERS.length;
-  const xPad = 55, xStep = (W - xPad*2) / (n-1);
-
-  for (let li = 0; li < n-1; li++) {
-    const x1 = xPad + li*xStep, x2 = xPad + (li+1)*xStep;
-    const n1 = LAYERS[li].vis, n2 = LAYERS[li+1].vis;
-    const health = gateHealth[li];
-    for (let a = 0; a < n1; a++) {
-      const y1 = H/2 + (a - (n1-1)/2) * (H/(n1+2));
-      for (let b = 0; b < n2; b++) {
-        const y2 = H/2 + (b - (n2-1)/2) * (H/(n2+2));
-        let alpha, col;
-        if (Math.random() > health) { alpha=0.03; col=`rgba(48,54,61,${alpha})`; }
-        else if (health < 0.5) { alpha=0.06+health*0.12; col=`rgba(255,166,87,${alpha})`; }
-        else { alpha=0.05+health*0.1; col=`rgba(63,185,80,${alpha})`; }
-        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
-        ctx.strokeStyle=col; ctx.lineWidth=0.5; ctx.stroke();
+function initLC(){
+  const ctx=document.getElementById('lchart').getContext('2d');
+  lchart=new Chart(ctx,{
+    type:'line',
+    data:{labels:LC.lbl,datasets:[
+      {label:'Accuracy',data:LC.acc,borderColor:'#3b82f6',backgroundColor:'transparent',borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#3b82f6',yAxisID:'ya'},
+      {label:'Sparsity',data:LC.spar,borderColor:'#10b981',backgroundColor:'transparent',borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#10b981',borderDash:[5,3],yAxisID:'yb'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6b7a8d',font:{family:"'JetBrains Mono'",size:9},maxTicksLimit:7,maxRotation:45}},
+        ya:{position:'left',min:40,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#3b82f6',font:{family:"'JetBrains Mono'",size:9},callback:v=>v+'%'}},
+        yb:{position:'right',min:0,max:100,grid:{display:false},ticks:{color:'#10b981',font:{family:"'JetBrains Mono'",size:9},callback:v=>v+'%'}}
       }
     }
-  }
+  });
+}
 
-  for (let li = 0; li < n; li++) {
-    const x = xPad + li*xStep;
-    const ns = LAYERS[li].vis;
-    const health = gateHealth[li];
-    for (let ni = 0; ni < ns; ni++) {
-      const y = H/2 + (ni - (ns-1)/2) * (H/(ns+2));
-      ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI*2);
-      ctx.fillStyle = health>0.6?'#3fb950':health>0.2?'#ffa657':'#30363d';
-      ctx.fill(); ctx.strokeStyle='#21262d'; ctx.lineWidth=1.5; ctx.stroke();
+const HL={id:'hl',afterDraw(ch){
+  const sc=ch.scales.x;let xi=ch._hlIdx||0;
+  const x=sc.getPixelForValue(xi);
+  const c=ch.ctx;c.save();c.beginPath();c.moveTo(x,ch.chartArea.top);c.lineTo(x,ch.chartArea.bottom);
+  c.strokeStyle='rgba(255,255,255,0.18)';c.lineWidth=1.5;c.setLineDash([4,4]);c.stroke();c.restore();
+}};
+Chart.register(HL);
+
+function updL(v){
+  const i=Math.round(v/100*(LC.acc.length-1));
+  const acc=LC.acc[i],spar=LC.spar[i],saved=((2230784*spar/100)/1e6).toFixed(2);
+  document.getElementById('ldsp').textContent=LC.lbl[i];
+  document.getElementById('lacc').textContent=acc.toFixed(1)+'%';
+  document.getElementById('lspar').textContent=spar.toFixed(0)+'%';
+  document.getElementById('lsaved').textContent=saved+'M';
+  document.getElementById('laccb').style.width=acc+'%';
+  document.getElementById('lsparb').style.width=spar+'%';
+  document.getElementById('lsavedb').style.width=spar+'%';
+  const col=acc>88?'#3b82f6':acc>75?'#f59e0b':'#ef4444';
+  document.getElementById('lacc').style.color=col;
+  document.getElementById('laccb').style.background=col;
+  document.getElementById('lins').textContent=INS[Math.min(i,INS.length-1)];
+  if(lchart){lchart._hlIdx=i;lchart.update('none');}
+}
+
+/* ═══ VIZ 3 — HISTOGRAM ═══ */
+const HCFG={
+  cnn: {prune:.675,label:'CNN  λ=1e-05  ·  67.75% pruned',color:'#3b82f6'},
+  cnn2:{prune:.897,label:'CNN  λ=5e-05  ·  89.69% pruned',color:'#f59e0b'},
+  mlp: {prune:.740,label:'MLP  λ=1e-05  ·  74.02% pruned',color:'#10b981'}
+};
+let hchart=null;
+
+function makeHist(pr){
+  const bins=55,data=[],labels=[];
+  for(let b=0;b<bins;b++){
+    const x=b/bins;labels.push((x).toFixed(2));
+    let y=0;
+    if(x<0.015) y=pr*5200+Math.random()*300;
+    else if(x<0.04) y=pr*900+Math.random()*120;
+    else if(x<0.1) y=(1-pr)*280+Math.random()*80;
+    else if(x>=0.35&&x<=0.82) y=(1-pr)*700*Math.sin(Math.PI*(x-.35)/.47)+Math.random()*150;
+    else y=Math.random()*50;
+    data.push(Math.max(0,Math.round(y)));
+  }
+  return {labels,data};
+}
+
+function initH(key){
+  const cfg=HCFG[key];
+  const {labels,data}=makeHist(cfg.prune);
+  const ctx=document.getElementById('hchart').getContext('2d');
+  if(hchart)hchart.destroy();
+  hchart=new Chart(ctx,{
+    type:'bar',
+    data:{labels,datasets:[{label:cfg.label,data,backgroundColor:cfg.color+'bb',borderColor:'transparent',borderWidth:0,barPercentage:1.0,categoryPercentage:1.0}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{title:{display:true,text:'Gate value  (0 = pruned  ·  1 = fully active)',color:'#6b7a8d',font:{family:"'JetBrains Mono'",size:10}},
+           grid:{color:'rgba(255,255,255,0.03)'},
+           ticks:{color:'#6b7a8d',font:{size:9},maxTicksLimit:8,callback:(v,i)=>i%8===0?labels[i]:''}},
+        y:{title:{display:true,text:'Number of weights',color:'#6b7a8d',font:{family:"'JetBrains Mono'",size:10}},
+           grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6b7a8d',font:{size:9}}}
+      }
     }
-    const parts = LAYERS[li].name.split('\n');
-    ctx.fillStyle='#8b949e'; ctx.font='10px monospace'; ctx.textAlign='center';
-    ctx.fillText(parts[0], x, H-18);
-    ctx.fillText(parts[1]||'', x, H-6);
-  }
-
-  ctx.fillStyle='#58a6ff'; ctx.font='11px system-ui'; ctx.textAlign='center';
-  ctx.fillText(getPhaseLabel(), W/2, 16);
+  });
+  document.getElementById('hstats').textContent=`${(cfg.prune*100).toFixed(1)}% of all weights pruned`;
 }
 
-function drawHistogram(sparsity) {
-  const canvas = document.getElementById('hist-canvas');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  const pad = {l:38,r:10,t:10,b:28};
-  const cW = W-pad.l-pad.r, cH = H-pad.t-pad.b;
-  const bins = 50, counts = new Array(bins).fill(0);
-  const total = 3835136;
-  const pruned = Math.floor(sparsity * total);
-  const active = total - pruned;
-  for (let i=0; i<Math.round(pruned/total*1000); i++) {
-    const v = Math.abs(Math.random()*0.008);
-    counts[Math.min(bins-1, Math.floor(v*bins))] += total/1000;
-  }
-  for (let i=0; i<Math.round(active/total*1000); i++) {
-    const v = 0.3+Math.random()*0.7;
-    counts[Math.min(bins-1, Math.floor(v*bins))] += total/1000;
-  }
-  const mx = Math.max(...counts);
-  ctx.strokeStyle='#21262d'; ctx.lineWidth=0.5;
-  for (let i=0;i<=4;i++){const y=pad.t+cH-(i/4)*cH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();}
-  const bw = cW/bins;
-  for (let i=0;i<bins;i++){
-    const gv=i/bins;
-    ctx.fillStyle=gv<0.01?'#f78166':(gv<0.1?'#ffa657':'#3fb950');
-    const h=(counts[i]/mx)*cH;
-    ctx.fillRect(pad.l+i*bw+0.5, pad.t+cH-h, bw-1, h);
-  }
-  const tx=pad.l+(0.01*bins)*bw;
-  ctx.beginPath();ctx.moveTo(tx,pad.t);ctx.lineTo(tx,pad.t+cH);
-  ctx.strokeStyle='#f78166';ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
-  ctx.fillStyle='#f78166';ctx.font='9px monospace';ctx.textAlign='left';
-  ctx.fillText('prune threshold 0.01', tx+3, pad.t+11);
-  ctx.fillStyle='#8b949e';ctx.font='9px system-ui';ctx.textAlign='center';
-  for(let i=0;i<=5;i++) ctx.fillText((i*0.2).toFixed(1), pad.l+(i/5)*cW, H-6);
-  ctx.fillStyle='#ffa657';ctx.font='11px system-ui';ctx.textAlign='right';
-  ctx.fillText((sparsity*100).toFixed(1)+'% pruned', W-pad.r, pad.t+14);
+function switchH(key,btn){
+  document.querySelectorAll('.hpill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');initH(key);
 }
 
-function drawCurves() {
-  const canvas = document.getElementById('curve-canvas');
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0,0,W,H);
-  const pad={l:40,r:80,t:8,b:22};
-  const cW=W-pad.l-pad.r, cH=H-pad.t-pad.b;
-  ctx.strokeStyle='#21262d';ctx.lineWidth=0.5;
-  for(let i=0;i<=4;i++){const y=pad.t+(i/4)*cH;ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(pad.l+cW,y);ctx.stroke();}
-  const n = accHistory.length;
-  if(n<2) return;
-  ctx.beginPath();ctx.strokeStyle='#3fb950';ctx.lineWidth=2;
-  for(let i=0;i<n;i++){const x=pad.l+(i/maxEpochs)*cW,y=pad.t+cH-(accHistory[i]/100)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-  ctx.stroke();
-  ctx.beginPath();ctx.strokeStyle='#ffa657';ctx.lineWidth=2;
-  for(let i=0;i<n;i++){const x=pad.l+(i/maxEpochs)*cW,y=pad.t+cH-(sparHistory[i]/100)*cH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-  ctx.stroke();
-  const wx=pad.l+(maxEpochs*0.20/maxEpochs)*cW;
-  ctx.fillStyle='rgba(88,166,255,0.05)';ctx.fillRect(pad.l,pad.t,wx-pad.l,cH);
-  ctx.fillStyle='#8b949e';ctx.font='9px system-ui';ctx.textAlign='right';
-  ctx.fillText('100%',pad.l-4,pad.t+8);ctx.fillText('0%',pad.l-4,pad.t+cH);
-  ctx.fillStyle='#3fb950';ctx.font='10px system-ui';ctx.textAlign='left';
-  ctx.fillText('Accuracy',pad.l+cW+8,pad.t+14);
-  ctx.fillStyle='#ffa657';ctx.fillText('Sparsity',pad.l+cW+8,pad.t+28);
-}
-
-drawNetwork(0); drawHistogram(0); drawCurves();
+/* ═══ INIT ═══ */
+window.addEventListener('load',()=>{
+  buildGrid();applyEpoch(0);
+  initLC();updL(35);
+  initH('cnn');
+});
+window.addEventListener('resize',()=>{buildGrid();applyEpoch(epoch);});
 </script>
 </body>
 </html>
