@@ -51,7 +51,7 @@ Two complete solutions are provided:
 | File | Architecture | Purpose |
 |---|---|---|
 | `train.py` + `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Primary submission — required by assignment** |
-| `Pruning With CNN feature extractor.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready with resume |
+| `Bonus Solution.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready with resume |
 
 > **Note on `train.py`:** The assignment asks for a *"single, well-commented Python script"*. `train.py` is exactly that — a direct, clean conversion of `Self Pruning MLP.ipynb` into a standalone runnable script. Both files contain identical logic; `train.py` is the formal submission artifact.
 ---
@@ -82,7 +82,7 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 .
 |-- train.py                                    # PRIMARY SUBMISSION: standalone Python script (Pure MLP)
 |-- Self Pruning MLP.ipynb                      # Notebook version of train.py (identical logic)
-|-- Pruning With CNN feature extractor.ipynb    # Bonus: CNN backbone + prunable head, Colab/resume
+|-- Bonus Solution.ipynb    # Bonus: CNN backbone + prunable head, Colab/resume
 |-- README.md
 |-- Outputs/
     |-- gate_distribution.png                   # Gate histogram (spike at 0 = successful pruning)
@@ -299,7 +299,7 @@ CIFAR-10 downloads automatically on first run (~170 MB). All outputs (plots, rep
 
 ## Solution 2: CNN + Prunable Classifier (Bonus)
 
-**File:** `Pruning With CNN feature extractor.ipynb`
+**File:** `Bonus Solution.ipynb`
 
 This notebook is a **bonus extension** designed for Google Colab. It uses a CNN backbone for feature extraction paired with a `PrunableLinear` classifier head. The pruning mechanism is identical in principle — the same `PrunableLinear` layer, the same L1 sparsity loss — but the CNN's convolutional layers extract spatial features first, giving the prunable head a much richer representation to work with. This results in significantly higher test accuracy compared to the pure MLP.
 
@@ -419,7 +419,7 @@ Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware
 
 **On Google Colab (recommended):**
 
-1. Open `Pruning With CNN feature extractor.ipynb` in Google Colab.
+1. Open `Bonus Solution.ipynb` in Google Colab.
 2. Mount your Google Drive when prompted (for checkpoint persistence):
    ```python
    from google.colab import drive
@@ -436,7 +436,7 @@ Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware
 **Locally:**
 ```bash
 pip install torch torchvision matplotlib numpy
-jupyter notebook Pruning With CNN feature extractor.ipynb
+jupyter notebook Bonus Solution.ipynb
 ```
 
 Remove the `drive.mount(...)` call at the top and set `output_dir = "./outputs"` in the `run_experiments` call.
