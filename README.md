@@ -85,8 +85,8 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 
 ## Solution 1: Pure MLP (Main Submission)
 
-**File:** `notebookd645b4b263.ipynb`
-
+**Files:** `train.py` (script) · `Self Pruning MLP.ipynb` (notebook)
+ 
 This is the primary, fully self-contained solution. It uses **no CNN, no convolutional layers anywhere**. Every single linear transformation in the network goes through a `PrunableLinear` layer. This is intentionally the harder path — a pure MLP operating on raw CIFAR-10 pixels — because it most cleanly demonstrates the pruning mechanism without any feature extraction shortcut.
 
 ### Architecture
