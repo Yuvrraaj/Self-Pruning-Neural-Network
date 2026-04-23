@@ -1,610 +1,1703 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Self-Pruning Neural Network</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --bg:#080b10;--surf:#0e1318;--surf2:#151c24;
-  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.13);
-  --tx:#e8edf3;--mu:#6b7a8d;--hint:#2a3340;
-  --blue:#3b82f6;--green:#10b981;--amber:#f59e0b;--red:#ef4444;
-  --mono:'JetBrains Mono',monospace;--disp:'Syne',sans-serif;
-}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--tx);font-family:var(--disp);overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
-  background-image:linear-gradient(rgba(59,130,246,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,.022) 1px,transparent 1px);
-  background-size:52px 52px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Self-Pruning Neural Network</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-/* ── NAV ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;
-  padding:.85rem 3rem;background:rgba(8,11,16,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--bd)}
-.nlogo{font-family:var(--mono);font-size:12px;color:var(--blue);letter-spacing:.06em}
-.nlinks{display:flex;gap:2rem;list-style:none}
-.nlinks a{font-family:var(--mono);font-size:11px;color:var(--mu);text-decoration:none;letter-spacing:.06em;transition:color .2s}
-.nlinks a:hover{color:var(--tx)}
-@media(max-width:680px){.nlinks{display:none}nav{padding:.85rem 1.4rem}}
+    :root {
+      --bg: #080b10;
+      --surf: #0e1318;
+      --surf2: #151c24;
+      --bd: rgba(255, 255, 255, 0.07);
+      --bd2: rgba(255, 255, 255, 0.13);
+      --tx: #e8edf3;
+      --mu: #6b7a8d;
+      --hint: #2a3340;
+      --blue: #3b82f6;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --mono: "JetBrains Mono", monospace;
+      --disp: "Syne", sans-serif;
+    }
 
-/* ── SHARED ── */
-.z{position:relative;z-index:1}
-.wrap{max-width:1060px;margin:0 auto;padding:5rem 2rem}
-.stag{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.5rem}
-.sh2{font-size:clamp(1.75rem,3.5vw,2.5rem);font-weight:800;letter-spacing:-.025em;margin-bottom:.7rem}
-.sdesc{color:var(--mu);max-width:540px;line-height:1.7;font-size:.93rem;margin-bottom:2.2rem}
-hr.dv{border:none;border-top:1px solid var(--bd)}
+    html {
+      scroll-behavior: smooth;
+    }
 
-/* ── HERO ── */
-#hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:6rem 2rem 4rem;position:relative;z-index:1}
-.hpill{display:inline-block;font-family:var(--mono);font-size:10px;color:var(--blue);
-  letter-spacing:.18em;text-transform:uppercase;border:1px solid rgba(59,130,246,.35);
-  padding:5px 16px;border-radius:2px;margin-bottom:2rem}
-.hh1{font-size:clamp(2.6rem,8vw,5.8rem);font-weight:800;line-height:.93;letter-spacing:-.04em;margin-bottom:1.4rem}
-.hh1 .gr{background:linear-gradient(90deg,#3b82f6,#10b981 55%,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hsub{color:var(--mu);font-size:1rem;max-width:500px;line-height:1.7;margin:0 auto 2.5rem}
-.hnums{display:flex;gap:3rem;justify-content:center;flex-wrap:wrap;margin-bottom:2.8rem}
-.hnum .v{font-size:2.4rem;font-weight:800;letter-spacing:-.04em;line-height:1;
-  background:linear-gradient(135deg,var(--blue),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hnum .l{font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:.1em;margin-top:4px}
-.hbtns{display:flex;gap:.9rem;justify-content:center;flex-wrap:wrap}
-.bp{padding:.72rem 1.6rem;background:var(--blue);color:#fff;border:none;font-family:var(--mono);
-  font-size:12px;letter-spacing:.05em;border-radius:3px;cursor:pointer;text-decoration:none;display:inline-block;transition:opacity .2s}
-.bp:hover{opacity:.82}
-.bo{padding:.72rem 1.6rem;background:transparent;color:var(--tx);border:1px solid var(--bd2);
-  font-family:var(--mono);font-size:12px;letter-spacing:.05em;border-radius:3px;cursor:pointer;
-  text-decoration:none;display:inline-block;transition:border-color .2s,color .2s}
-.bo:hover{border-color:var(--blue);color:var(--blue)}
+    body {
+      background: var(--bg);
+      color: var(--tx);
+      font-family: var(--disp);
+      overflow-x: hidden;
+    }
 
-/* ── HOW ── */
-#how{background:var(--surf);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd)}
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1px;
-  background:var(--bd);border:1px solid var(--bd);border-radius:5px;overflow:hidden;margin-bottom:1.8rem}
-.step{background:var(--surf);padding:1.6rem 1.3rem}
-.sn{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.12em;margin-bottom:.8rem}
-.step h3{font-size:.9rem;font-weight:700;margin-bottom:.5rem}
-.step p{font-size:13px;color:var(--mu);line-height:1.6}
-.codeblk{background:var(--surf2);border:1px solid var(--bd);border-left:3px solid var(--blue);
-  border-radius:3px;padding:1.3rem 1.7rem;font-family:var(--mono);font-size:13px;line-height:2;
-  overflow-x:auto;color:var(--tx)}
-.cm{color:var(--mu)}.kw{color:#f472b6}.fn{color:var(--blue)}.st{color:var(--green)}.op{color:var(--amber)}
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.022) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.022) 1px, transparent 1px);
+      background-size: 52px 52px;
+    }
 
-/* ── VIZ ── */
-.vtabs{display:flex;gap:0;border:1px solid var(--bd);border-radius:4px;overflow:hidden;width:fit-content;margin-bottom:2rem}
-.vtab{padding:.52rem 1.25rem;background:transparent;border:none;border-right:1px solid var(--bd);
-  cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--mu);transition:all .2s}
-.vtab:last-child{border-right:none}
-.vtab.on{background:var(--blue);color:#fff}
-.vp{display:none}.vp.on{display:block}
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 3rem;
+      background: rgba(8, 11, 16, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--bd);
+    }
 
-/* gate animation */
-.gbox{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.4rem;margin-bottom:1.2rem}
-.glbl{font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:.1em;margin-bottom:.9rem}
-#gg{display:grid;gap:2px;width:100%;margin-bottom:.9rem}
-.gc{border-radius:2px;transition:background .35s,opacity .35s}
-.gctrl{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:.5rem}
-.gstat{font-family:var(--mono);font-size:12px}
-.gstat b{color:var(--blue)}
-#pbtn{padding:.48rem 1.1rem;background:var(--green);color:#000;border:none;font-family:var(--mono);
-  font-size:11px;letter-spacing:.06em;border-radius:3px;cursor:pointer;font-weight:700}
-#rbtn{padding:.48rem 1.1rem;background:transparent;color:var(--mu);border:1px solid var(--bd2);
-  font-family:var(--mono);font-size:11px;border-radius:3px;cursor:pointer}
-.gleg{display:flex;gap:1rem;font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.6rem;flex-wrap:wrap}
-.ld{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:3px;vertical-align:middle}
+    .nlogo {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--blue);
+      letter-spacing: 0.06em;
+    }
 
-/* lambda slider */
-.lbox{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.6rem;margin-bottom:1.2rem}
-.lrow{display:flex;align-items:center;gap:1rem;margin-bottom:1.4rem;flex-wrap:wrap}
-.llbl{font-family:var(--mono);font-size:12px;color:var(--mu);white-space:nowrap}
-#lslide{flex:1;min-width:150px;accent-color:var(--blue)}
-.lval{font-family:var(--mono);font-size:14px;color:var(--blue);font-weight:700;min-width:56px}
-.lmets{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.9rem;margin-bottom:1.3rem}
-.lmet{background:var(--surf2);border-radius:5px;padding:.9rem}
-.lmet .ml{font-family:var(--mono);font-size:10px;color:var(--mu);letter-spacing:.08em;margin-bottom:.35rem}
-.lmet .mv{font-size:1.5rem;font-weight:800;letter-spacing:-.03em}
-.lbar{height:4px;background:var(--hint);border-radius:2px;overflow:hidden;margin-top:.4rem}
-.lbf{height:100%;border-radius:2px;transition:width .45s ease}
-.lins{font-family:var(--mono);font-size:12px;color:var(--mu);background:var(--surf2);
-  padding:.85rem 1rem;border-radius:4px;border-left:3px solid var(--blue);line-height:1.6}
+    .nlinks {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
 
-/* histogram */
-.hbox{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.6rem;margin-bottom:1.2rem}
-.hpills{display:flex;align-items:center;gap:.7rem;margin-bottom:1.4rem;flex-wrap:wrap}
-.hpill{padding:.38rem .95rem;background:transparent;border:1px solid var(--bd2);
-  font-family:var(--mono);font-size:11px;color:var(--mu);border-radius:3px;cursor:pointer;transition:all .2s}
-.hpill.on{background:var(--blue);border-color:var(--blue);color:#fff}
+    .nlinks a {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--mu);
+      text-decoration: none;
+      letter-spacing: 0.06em;
+      transition: color 0.2s;
+    }
 
-/* results */
-.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}
-@media(max-width:680px){.rgrid{grid-template-columns:1fr}}
-.rc{background:var(--surf);border:1px solid var(--bd);border-radius:6px;padding:1.3rem;position:relative;transition:border-color .2s}
-.rc:hover{border-color:var(--bd2)}
-.rc.best{border-color:var(--green);background:rgba(16,185,129,.04)}
-.btag{position:absolute;top:-1px;right:12px;background:var(--green);color:#000;
-  font-family:var(--mono);font-size:9px;letter-spacing:.1em;padding:3px 9px;border-radius:0 0 4px 4px;font-weight:700}
-.rlam{font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.9rem}
-.rrow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px}
-.rkey{font-family:var(--mono);font-size:11px;color:var(--mu)}
-.rval{font-size:1.4rem;font-weight:800;letter-spacing:-.03em}
-.rb{height:3px;background:var(--hint);border-radius:2px;overflow:hidden;margin-bottom:.9rem}
-.rbf{height:100%;border-radius:2px}
+    .nlinks a:hover {
+      color: var(--tx);
+    }
 
-/* theory */
-#theory{background:var(--surf);border-top:1px solid var(--bd)}
-.tgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.2rem}
-.tc{background:var(--bg);border:1px solid var(--bd);border-radius:6px;padding:1.5rem}
-.tc h3{font-size:.93rem;font-weight:700;margin-bottom:.7rem}
-.tc p{font-size:13px;color:var(--mu);line-height:1.65;margin-bottom:.7rem}
-.tc .math{font-family:var(--mono);font-size:12px;background:var(--surf2);padding:.65rem .9rem;border-radius:3px;color:var(--green);line-height:1.7}
+    @media (max-width: 680px) {
+      .nlinks {
+        display: none;
+      }
 
-/* footer */
-footer{border-top:1px solid var(--bd);padding:2.8rem 2rem;text-align:center;position:relative;z-index:1}
-footer p{font-family:var(--mono);font-size:11px;color:var(--mu);line-height:1.9}
-footer a{color:var(--blue);text-decoration:none}
+      nav {
+        padding: 0.85rem 1.4rem;
+      }
+    }
 
-@keyframes fu{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-.fu{animation:fu .65s ease both}
-.d1{animation-delay:.1s}.d2{animation-delay:.2s}.d3{animation-delay:.3s}.d4{animation-delay:.4s}
-</style>
+    /* ── SHARED ── */
+    .z {
+      position: relative;
+      z-index: 1;
+    }
+
+    .wrap {
+      max-width: 1060px;
+      margin: 0 auto;
+      padding: 5rem 2rem;
+    }
+
+    .stag {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--blue);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    .sh2 {
+      font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.7rem;
+    }
+
+    .sdesc {
+      color: var(--mu);
+      max-width: 540px;
+      line-height: 1.7;
+      font-size: 0.93rem;
+      margin-bottom: 2.2rem;
+    }
+
+    hr.dv {
+      border: none;
+      border-top: 1px solid var(--bd);
+    }
+
+    /* ── HERO ── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 2rem 4rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hpill {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--blue);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      padding: 5px 16px;
+      border-radius: 2px;
+      margin-bottom: 2rem;
+    }
+
+    .hh1 {
+      font-size: clamp(2.6rem, 8vw, 5.8rem);
+      font-weight: 800;
+      line-height: 0.93;
+      letter-spacing: -0.04em;
+      margin-bottom: 1.4rem;
+    }
+
+    .hh1 .gr {
+      background: linear-gradient(90deg, #3b82f6, #10b981 55%, #f59e0b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hsub {
+      color: var(--mu);
+      font-size: 1rem;
+      max-width: 500px;
+      line-height: 1.7;
+      margin: 0 auto 2.5rem;
+    }
+
+    .hnums {
+      display: flex;
+      gap: 3rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2.8rem;
+    }
+
+    .hnum .v {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      background: linear-gradient(135deg, var(--blue), var(--green));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hnum .l {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--mu);
+      letter-spacing: 0.1em;
+      margin-top: 4px;
+    }
+
+    .hbtns {
+      display: flex;
+      gap: 0.9rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .bp {
+      padding: 0.72rem 1.6rem;
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      border-radius: 3px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.2s;
+    }
+
+    .bp:hover {
+      opacity: 0.82;
+    }
+
+    .bo {
+      padding: 0.72rem 1.6rem;
+      background: transparent;
+      color: var(--tx);
+      border: 1px solid var(--bd2);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      border-radius: 3px;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition:
+        border-color 0.2s,
+        color 0.2s;
+    }
+
+    .bo:hover {
+      border-color: var(--blue);
+      color: var(--blue);
+    }
+
+    /* ── HOW ── */
+    #how {
+      background: var(--surf);
+      border-top: 1px solid var(--bd);
+      border-bottom: 1px solid var(--bd);
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 1px;
+      background: var(--bd);
+      border: 1px solid var(--bd);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-bottom: 1.8rem;
+    }
+
+    .step {
+      background: var(--surf);
+      padding: 1.6rem 1.3rem;
+    }
+
+    .sn {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--blue);
+      letter-spacing: 0.12em;
+      margin-bottom: 0.8rem;
+    }
+
+    .step h3 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .step p {
+      font-size: 13px;
+      color: var(--mu);
+      line-height: 1.6;
+    }
+
+    .codeblk {
+      background: var(--surf2);
+      border: 1px solid var(--bd);
+      border-left: 3px solid var(--blue);
+      border-radius: 3px;
+      padding: 1.3rem 1.7rem;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 2;
+      overflow-x: auto;
+      color: var(--tx);
+    }
+
+    .cm {
+      color: var(--mu);
+    }
+
+    .kw {
+      color: #f472b6;
+    }
+
+    .fn {
+      color: var(--blue);
+    }
+
+    .st {
+      color: var(--green);
+    }
+
+    .op {
+      color: var(--amber);
+    }
+
+    /* ── VIZ ── */
+    .vtabs {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--bd);
+      border-radius: 4px;
+      overflow: hidden;
+      width: fit-content;
+      margin-bottom: 2rem;
+    }
+
+    .vtab {
+      padding: 0.52rem 1.25rem;
+      background: transparent;
+      border: none;
+      border-right: 1px solid var(--bd);
+      cursor: pointer;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      color: var(--mu);
+      transition: all 0.2s;
+    }
+
+    .vtab:last-child {
+      border-right: none;
+    }
+
+    .vtab.on {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .vp {
+      display: none;
+    }
+
+    .vp.on {
+      display: block;
+    }
+
+    /* gate animation */
+    .gbox {
+      background: var(--surf);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 1.4rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .glbl {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--mu);
+      letter-spacing: 0.1em;
+      margin-bottom: 0.9rem;
+    }
+
+    #gg {
+      display: grid;
+      gap: 2px;
+      width: 100%;
+      margin-bottom: 0.9rem;
+    }
+
+    .gc {
+      border-radius: 2px;
+      transition:
+        background 0.35s,
+        opacity 0.35s;
+    }
+
+    .gctrl {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+
+    .gstat {
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .gstat b {
+      color: var(--blue);
+    }
+
+    #pbtn {
+      padding: 0.48rem 1.1rem;
+      background: var(--green);
+      color: #000;
+      border: none;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      border-radius: 3px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    #rbtn {
+      padding: 0.48rem 1.1rem;
+      background: transparent;
+      color: var(--mu);
+      border: 1px solid var(--bd2);
+      font-family: var(--mono);
+      font-size: 11px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .gleg {
+      display: flex;
+      gap: 1rem;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--mu);
+      margin-bottom: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .ld {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      display: inline-block;
+      margin-right: 3px;
+      vertical-align: middle;
+    }
+
+    /* lambda slider */
+    .lbox {
+      background: var(--surf);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 1.6rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .lrow {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.4rem;
+      flex-wrap: wrap;
+    }
+
+    .llbl {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--mu);
+      white-space: nowrap;
+    }
+
+    #lslide {
+      flex: 1;
+      min-width: 150px;
+      accent-color: var(--blue);
+    }
+
+    .lval {
+      font-family: var(--mono);
+      font-size: 14px;
+      color: var(--blue);
+      font-weight: 700;
+      min-width: 56px;
+    }
+
+    .lmets {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.9rem;
+      margin-bottom: 1.3rem;
+    }
+
+    .lmet {
+      background: var(--surf2);
+      border-radius: 5px;
+      padding: 0.9rem;
+    }
+
+    .lmet .ml {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--mu);
+      letter-spacing: 0.08em;
+      margin-bottom: 0.35rem;
+    }
+
+    .lmet .mv {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .lbar {
+      height: 4px;
+      background: var(--hint);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 0.4rem;
+    }
+
+    .lbf {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.45s ease;
+    }
+
+    .lins {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--mu);
+      background: var(--surf2);
+      padding: 0.85rem 1rem;
+      border-radius: 4px;
+      border-left: 3px solid var(--blue);
+      line-height: 1.6;
+    }
+
+    /* histogram */
+    .hbox {
+      background: var(--surf);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 1.6rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .hpills {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      margin-bottom: 1.4rem;
+      flex-wrap: wrap;
+    }
+
+    .hpill {
+      padding: 0.38rem 0.95rem;
+      background: transparent;
+      border: 1px solid var(--bd2);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--mu);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .hpill.on {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    /* results */
+    .rgrid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    @media (max-width: 680px) {
+      .rgrid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .rc {
+      background: var(--surf);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 1.3rem;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+
+    .rc:hover {
+      border-color: var(--bd2);
+    }
+
+    .rc.best {
+      border-color: var(--green);
+      background: rgba(16, 185, 129, 0.04);
+    }
+
+    .btag {
+      position: absolute;
+      top: -1px;
+      right: 12px;
+      background: var(--green);
+      color: #000;
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      padding: 3px 9px;
+      border-radius: 0 0 4px 4px;
+      font-weight: 700;
+    }
+
+    .rlam {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--mu);
+      margin-bottom: 0.9rem;
+    }
+
+    .rrow {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 3px;
+    }
+
+    .rkey {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--mu);
+    }
+
+    .rval {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .rb {
+      height: 3px;
+      background: var(--hint);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 0.9rem;
+    }
+
+    .rbf {
+      height: 100%;
+      border-radius: 2px;
+    }
+
+    /* theory */
+    #theory {
+      background: var(--surf);
+      border-top: 1px solid var(--bd);
+    }
+
+    .tgrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 1.2rem;
+    }
+
+    .tc {
+      background: var(--bg);
+      border: 1px solid var(--bd);
+      border-radius: 6px;
+      padding: 1.5rem;
+    }
+
+    .tc h3 {
+      font-size: 0.93rem;
+      font-weight: 700;
+      margin-bottom: 0.7rem;
+    }
+
+    .tc p {
+      font-size: 13px;
+      color: var(--mu);
+      line-height: 1.65;
+      margin-bottom: 0.7rem;
+    }
+
+    .tc .math {
+      font-family: var(--mono);
+      font-size: 12px;
+      background: var(--surf2);
+      padding: 0.65rem 0.9rem;
+      border-radius: 3px;
+      color: var(--green);
+      line-height: 1.7;
+    }
+
+    /* footer */
+    footer {
+      border-top: 1px solid var(--bd);
+      padding: 2.8rem 2rem;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    footer p {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--mu);
+      line-height: 1.9;
+    }
+
+    footer a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    @keyframes fu {
+      from {
+        opacity: 0;
+        transform: translateY(16px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fu {
+      animation: fu 0.65s ease both;
+    }
+
+    .d1 {
+      animation-delay: 0.1s;
+    }
+
+    .d2 {
+      animation-delay: 0.2s;
+    }
+
+    .d3 {
+      animation-delay: 0.3s;
+    }
+
+    .d4 {
+      animation-delay: 0.4s;
+    }
+  </style>
 </head>
+
 <body>
+  <nav>
+    <div class="nlogo">// self-pruning-net</div>
+    <ul class="nlinks">
+      <li><a href="#how">method</a></li>
+      <li><a href="#viz">visualize</a></li>
+      <li><a href="#results">results</a></li>
+      <li><a href="#theory">theory</a></li>
+    </ul>
+  </nav>
 
-<nav>
-  <div class="nlogo">// self-pruning-net</div>
-  <ul class="nlinks">
-    <li><a href="#how">method</a></li>
-    <li><a href="#viz">visualize</a></li>
-    <li><a href="#results">results</a></li>
-    <li><a href="#theory">theory</a></li>
-  </ul>
-</nav>
-
-<!-- HERO -->
-<section id="hero" class="z">
-  <div class="hpill fu">Tredence AI Engineering · Case Study 2025</div>
-  <h1 class="hh1">
-    <span class="fu d1">Neural Networks<br></span>
-    <span class="gr fu d2">That Prune Themselves</span>
-  </h1>
-  <p class="hsub fu d3">A network that learns which of its own weights are unnecessary and removes them during training. No post-training step. Fully differentiable.</p>
-  <div class="hnums fu d4">
-    <div class="hnum"><div class="v">91%</div><div class="l">CNN accuracy</div></div>
-    <div class="hnum"><div class="v">89.7%</div><div class="l">weights pruned</div></div>
-    <div class="hnum"><div class="v">61%</div><div class="l">pure MLP acc</div></div>
-    <div class="hnum"><div class="v">74%</div><div class="l">MLP sparsity</div></div>
-  </div>
-  <div class="hbtns fu d4">
-    <a href="https://github.com/Yuvrraaj/Self-Pruning-Neural-Network" class="bp">View on GitHub</a>
-    <a href="#viz" class="bo">Try the Demo</a>
-  </div>
-</section>
-
-<hr class="dv">
-
-<!-- HOW IT WORKS -->
-<section id="how" class="z">
-<div class="wrap">
-  <p class="stag">mechanism</p>
-  <h2 class="sh2">How self-pruning works</h2>
-  <p class="sdesc">Four steps — trained end-to-end with a single optimizer. No separate pruning phase.</p>
-  <div class="steps">
-    <div class="step"><div class="sn">01 · GATE SCORES</div><h3>One gate per weight</h3><p>Every weight gets a companion learnable number called a gate score — same shape, updated by the same optimizer.</p></div>
-    <div class="step"><div class="sn">02 · SIGMOID</div><h3>Squash to (0, 1)</h3><p>Sigmoid converts gate scores to values between 0 and 1. A gate of 0 means that weight is silenced — effectively deleted.</p></div>
-    <div class="step"><div class="sn">03 · MASK</div><h3>Multiply onto weights</h3><p>Pruned weight = weight × gate. When gate ≈ 0, the connection contributes nothing regardless of the weight's magnitude.</p></div>
-    <div class="step"><div class="sn">04 · L1 PRESSURE</div><h3>Penalise open gates</h3><p>A sparsity penalty pushes all gates toward zero. Gates only stay open if the accuracy benefit outweighs the penalty λ.</p></div>
-  </div>
-  <div class="codeblk">
-<span class="cm"># PrunableLinear forward pass</span>
-<span class="kw">gates</span>          = <span class="fn">torch.sigmoid</span>(self.<span class="st">gate_scores</span>)   <span class="cm"># ∈ (0,1)</span>
-<span class="kw">pruned_weights</span> = self.<span class="st">weight</span> <span class="op">*</span> gates             <span class="cm"># gate=0 kills it</span>
-<span class="kw">output</span>         = <span class="fn">F.linear</span>(x, pruned_weights, self.<span class="st">bias</span>)
-
-<span class="cm"># Total loss</span>
-<span class="kw">loss</span> = <span class="fn">CrossEntropy</span>(logits, labels) <span class="op">+</span> λ <span class="op">×</span> <span class="fn">sum</span>(all gates)
-  </div>
-</div>
-</section>
-
-<hr class="dv">
-
-<!-- INTERACTIVE VIZ -->
-<section id="viz" class="z">
-<div class="wrap">
-  <p class="stag">interactive demo</p>
-  <h2 class="sh2">Watch pruning happen</h2>
-  <p class="sdesc">Three interactive demos. No machine learning background needed.</p>
-
-  <div class="vtabs">
-    <button class="vtab on" onclick="switchV('gate',this)">Gate animation</button>
-    <button class="vtab" onclick="switchV('lam',this)">Lambda slider</button>
-    <button class="vtab" onclick="switchV('hist',this)">Gate histogram</button>
-  </div>
-
-  <!-- VIZ 1: GATE ANIMATION -->
-  <div class="vp on" id="vp-gate">
-    <div class="gbox">
-      <div class="glbl">NETWORK WEIGHTS — each square is one connection. Blue = active &nbsp;|&nbsp; Dark = pruned &nbsp;|&nbsp; Orange = fading out</div>
-      <div id="gg"></div>
-      <div class="gleg">
-        <span><span class="ld" style="background:#3b82f6"></span>Active</span>
-        <span><span class="ld" style="background:#f59e0b"></span>Fading</span>
-        <span><span class="ld" style="background:#151c24;border:1px solid #2a3340"></span>Pruned</span>
-      </div>
-      <div class="gctrl">
-        <button id="pbtn" onclick="toggleAnim()">PLAY PRUNING</button>
-        <button id="rbtn" onclick="resetAnim()">RESET</button>
-        <div class="gstat">Epoch <b id="epn">0</b> / 60</div>
-        <div class="gstat">Pruned <b id="ppct">0%</b></div>
-        <div class="gstat">Accuracy <b id="acn">40%</b></div>
-      </div>
-    </div>
-    <p style="font-size:13px;color:var(--mu);line-height:1.7;max-width:680px">
-      Press Play to watch 60 epochs of training. For the first 15 epochs the network learns freely — no weights are removed. Then sparsity pressure turns on and redundant connections begin to fade and disappear. The network keeps only what it truly needs.
+  <!-- HERO -->
+  <section id="hero" class="z">
+    <div class="hpill fu">Tredence AI Engineering · Case Study 2025</div>
+    <h1 class="hh1">
+      <span class="fu d1">Neural Networks<br /></span>
+      <span class="gr fu d2">That Prune Themselves</span>
+    </h1>
+    <p class="hsub fu d3">
+    <p class="hsub fu d3">
+      A self-pruning neural network demonstrated on a pure MLP architecture, achieving high sparsity while maintaining
+      accuracy, with CNN results provided for comparison.
     </p>
-  </div>
-
-  <!-- VIZ 2: LAMBDA SLIDER -->
-  <div class="vp" id="vp-lam">
-    <div class="lbox">
-      <div class="lrow">
-        <span class="llbl">Sparsity pressure λ</span>
-        <input type="range" id="lslide" min="0" max="100" value="35" step="1" oninput="updL(this.value)">
-        <span class="lval" id="ldsp">1e-05</span>
-      </div>
-      <div class="lmets">
-        <div class="lmet">
-          <div class="ml">TEST ACCURACY</div>
-          <div class="mv" id="lacc" style="color:var(--blue)">91.0%</div>
-          <div class="lbar"><div class="lbf" id="laccb" style="width:91%;background:var(--blue)"></div></div>
-        </div>
-        <div class="lmet">
-          <div class="ml">SPARSITY</div>
-          <div class="mv" id="lspar" style="color:var(--green)">67.8%</div>
-          <div class="lbar"><div class="lbf" id="lsparb" style="width:67.8%;background:var(--green)"></div></div>
-        </div>
-        <div class="lmet">
-          <div class="ml">WEIGHTS REMOVED</div>
-          <div class="mv" id="lsaved" style="color:var(--amber)">1.51M</div>
-          <div class="lbar"><div class="lbf" id="lsavedb" style="width:50%;background:var(--amber)"></div></div>
-        </div>
-      </div>
-      <div style="position:relative;height:210px;margin-bottom:1rem">
-        <canvas id="lchart" role="img" aria-label="Line chart showing accuracy and sparsity as lambda increases from zero to one">As lambda increases, sparsity rises steeply while accuracy stays near 91 percent until very high lambda values where it drops sharply.</canvas>
-      </div>
-      <div class="lins" id="lins">Sweet spot — high accuracy with meaningful compression.</div>
-    </div>
-    <div style="display:flex;gap:1.5rem;font-family:var(--mono);font-size:11px;color:var(--mu);margin-top:.5rem;flex-wrap:wrap">
-      <span><span style="display:inline-block;width:10px;height:2px;background:var(--blue);vertical-align:middle;margin-right:4px"></span>Accuracy (%)</span>
-      <span><span style="display:inline-block;width:10px;height:2px;background:var(--green);vertical-align:middle;margin-right:4px;border-top:2px dashed var(--green)"></span>Sparsity (%)</span>
-    </div>
-  </div>
-
-  <!-- VIZ 3: HISTOGRAM -->
-  <div class="vp" id="vp-hist">
-    <div class="hbox">
-      <div class="hpills">
-        <span style="font-family:var(--mono);font-size:11px;color:var(--mu)">Model:</span>
-        <button class="hpill on" onclick="switchH('cnn',this)">CNN  λ=1e-05</button>
-        <button class="hpill" onclick="switchH('cnn2',this)">CNN  λ=5e-05</button>
-        <button class="hpill" onclick="switchH('mlp',this)">MLP  λ=1e-05</button>
-      </div>
-      <div style="position:relative;height:270px">
-        <canvas id="hchart" role="img" aria-label="Histogram of gate values: large spike near zero shows pruned weights, cluster near 0.5-0.8 shows surviving active weights">Gate value histogram showing bimodal distribution: large spike at gate value near zero representing pruned weights, and smaller cluster at higher gate values representing active weights.</canvas>
-      </div>
-      <div style="margin-top:.9rem;display:flex;gap:1.5rem;flex-wrap:wrap;font-family:var(--mono);font-size:12px">
-        <span style="color:var(--red)"><span class="ld" style="background:var(--red)"></span> Spike at 0 = pruned weights</span>
-        <span style="color:var(--green)"><span class="ld" style="background:var(--green)"></span> Cluster &gt;0.3 = active weights</span>
-        <span id="hstats" style="color:var(--blue)"></span>
-      </div>
-    </div>
-    <p style="font-size:13px;color:var(--mu);line-height:1.7;max-width:680px">
-      A successful self-pruning model shows a two-peak (bimodal) distribution. The massive spike near 0 is every weight the network decided it didn't need. The cluster on the right are the survivors — the connections that genuinely help make accurate predictions.
     </p>
-  </div>
-</div>
-</section>
+    <div class="hnums fu d4">
+      <div class="hnum">
+        <div class="v">60.5%</div>
+        <div class="l">MLP accuracy</div>
+      </div>
 
-<hr class="dv">
+      <div class="hnum">
+        <div class="v">92.9%</div>
+        <div class="l">MLP sparsity</div>
+      </div>
 
-<!-- RESULTS -->
-<section id="results" class="z">
-<div class="wrap">
-  <p class="stag">experiments</p>
-  <h2 class="sh2">Results — both models</h2>
-  <p class="sdesc">Three λ values tested per model. Higher λ = more pruning pressure = more weights removed.</p>
+      <div class="hnum">
+        <div class="v">91.0%</div>
+        <div class="l">CNN accuracy</div>
+      </div>
 
-  <p style="font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.9rem;letter-spacing:.05em">CNN MODEL</p>
-  <div class="rgrid" style="margin-bottom:2.5rem">
-    <div class="rc">
-      <div class="rlam">λ = 1e-06 · low pressure</div>
-      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--blue)">90.97%</span></div>
-      <div class="rb"><div class="rbf" style="width:90.97%;background:var(--blue)"></div></div>
-      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--mu)">13.64%</span></div>
-      <div class="rb"><div class="rbf" style="width:13.64%;background:var(--mu)"></div></div>
+      <div class="hnum">
+        <div class="v">89.7%</div>
+        <div class="l">CNN sparsity</div>
+      </div>
     </div>
-    <div class="rc best">
-      <div class="btag">SWEET SPOT</div>
-      <div class="rlam">λ = 1e-05 · medium pressure</div>
-      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--green)">91.03%</span></div>
-      <div class="rb"><div class="rbf" style="width:91.03%;background:var(--green)"></div></div>
-      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--green)">67.75%</span></div>
-      <div class="rb"><div class="rbf" style="width:67.75%;background:var(--green)"></div></div>
+    <div class="hbtns fu d4">
+      <a href="https://github.com/Yuvrraaj/Self-Pruning-Neural-Network" class="bp">View on GitHub</a>
+      <a href="#viz" class="bo">Try the Demo</a>
     </div>
-    <div class="rc">
-      <div class="rlam">λ = 5e-05 · high pressure</div>
-      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--amber)">90.89%</span></div>
-      <div class="rb"><div class="rbf" style="width:90.89%;background:var(--amber)"></div></div>
-      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--amber)">89.69%</span></div>
-      <div class="rb"><div class="rbf" style="width:89.69%;background:var(--amber)"></div></div>
+  </section>
+
+  <hr class="dv" />
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="z">
+    <div class="wrap">
+      <p class="stag">mechanism</p>
+      <h2 class="sh2">How self-pruning works</h2>
+      <p class="sdesc">
+        Four steps — trained end-to-end with a single optimizer. No separate
+        pruning phase.
+      </p>
+      <div class="steps">
+        <div class="step">
+          <div class="sn">01 · GATE SCORES</div>
+          <h3>One gate per weight</h3>
+          <p>
+            Every weight gets a companion learnable number called a gate score
+            — same shape, updated by the same optimizer.
+          </p>
+        </div>
+        <div class="step">
+          <div class="sn">02 · SIGMOID</div>
+          <h3>Squash to (0, 1)</h3>
+          <p>
+            Sigmoid converts gate scores to values between 0 and 1. A gate of
+            0 means that weight is silenced — effectively deleted.
+          </p>
+        </div>
+        <div class="step">
+          <div class="sn">03 · MASK</div>
+          <h3>Multiply onto weights</h3>
+          <p>
+            Pruned weight = weight × gate. When gate ≈ 0, the connection
+            contributes nothing regardless of the weight's magnitude.
+          </p>
+        </div>
+        <div class="step">
+          <div class="sn">04 · L1 PRESSURE</div>
+          <h3>Penalise open gates</h3>
+          <p>
+            A sparsity penalty pushes all gates toward zero. Gates only stay
+            open if the accuracy benefit outweighs the penalty λ.
+          </p>
+        </div>
+      </div>
+      <div class="codeblk">
+        <span class="cm"># PrunableLinear forward pass</span>
+        <span class="kw">gates</span> =
+        <span class="fn">torch.sigmoid</span>(self.<span class="st">gate_scores</span>)
+        <span class="cm"># ∈ (0,1)</span>
+        <span class="kw">pruned_weights</span> = self.<span class="st">weight</span>
+        <span class="op">*</span> gates
+        <span class="cm"># gate=0 kills it</span>
+        <span class="kw">output</span> = <span class="fn">F.linear</span>(x,
+        pruned_weights, self.<span class="st">bias</span>)
+
+        <span class="cm"># Total loss</span>
+        <span class="kw">loss</span> =
+        <span class="fn">CrossEntropy</span>(logits, labels)
+        <span class="op">+</span> λ <span class="op">×</span>
+        <span class="fn">sum</span>(all gates)
+      </div>
     </div>
-  </div>
+  </section>
 
-  <p style="font-family:var(--mono);font-size:11px;color:var(--mu);margin-bottom:.9rem;letter-spacing:.05em">PURE MLP MODEL</p>
-  <div class="rgrid">
-    <div class="rc">
-      <div class="rlam">λ = 1e-06 · low pressure</div>
-      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--blue)">61.32%</span></div>
-      <div class="rb"><div class="rbf" style="width:61.32%;background:var(--blue)"></div></div>
-      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--mu)">28.04%</span></div>
-      <div class="rb"><div class="rbf" style="width:28.04%;background:var(--mu)"></div></div>
+  <hr class="dv" />
+
+  <!-- INTERACTIVE VIZ -->
+  <section id="viz" class="z">
+    <div class="wrap">
+      <p class="stag">interactive demo</p>
+      <h2 class="sh2">Watch pruning happen</h2>
+      <p class="sdesc">
+        Three interactive demos. No machine learning background needed.
+      </p>
+
+      <div class="vtabs">
+        <button class="vtab on" onclick="switchV('gate', this)">
+          Gate animation
+        </button>
+        <button class="vtab" onclick="switchV('lam', this)">
+          Lambda slider
+        </button>
+        <button class="vtab" onclick="switchV('hist', this)">
+          Gate histogram
+        </button>
+      </div>
+
+      <!-- VIZ 1: GATE ANIMATION -->
+      <div class="vp on" id="vp-gate">
+        <div class="gbox">
+          <div class="glbl">
+            NETWORK WEIGHTS — each square is one connection. Blue = active
+            &nbsp;|&nbsp; Dark = pruned &nbsp;|&nbsp; Orange = fading out
+          </div>
+          <div id="gg"></div>
+          <div class="gleg">
+            <span><span class="ld" style="background: #3b82f6"></span>Active</span>
+            <span><span class="ld" style="background: #f59e0b"></span>Fading</span>
+            <span><span class="ld" style="background: #151c24; border: 1px solid #2a3340"></span>Pruned</span>
+          </div>
+          <div class="gctrl">
+            <button id="pbtn" onclick="toggleAnim()">PLAY PRUNING</button>
+            <button id="rbtn" onclick="resetAnim()">RESET</button>
+            <div class="gstat">Epoch <b id="epn">0</b> / 60</div>
+            <div class="gstat">Pruned <b id="ppct">0%</b></div>
+            <div class="gstat">Accuracy <b id="acn">40%</b></div>
+          </div>
+        </div>
+        <p style="
+              font-size: 13px;
+              color: var(--mu);
+              line-height: 1.7;
+              max-width: 680px;
+            ">
+          Press Play to watch 60 epochs of training. For the first 15 epochs
+          the network learns freely — no weights are removed. Then sparsity
+          pressure turns on and redundant connections begin to fade and
+          disappear. The network keeps only what it truly needs.
+        </p>
+      </div>
+
+      <!-- VIZ 2: LAMBDA SLIDER -->
+      <div class="vp" id="vp-lam">
+        <div class="lbox">
+          <div class="lrow">
+            <span class="llbl">Sparsity pressure λ</span>
+            <input type="range" id="lslide" min="0" max="100" value="35" step="1" oninput="updL(this.value)" />
+            <span class="lval" id="ldsp">1e-05</span>
+          </div>
+          <div class="lmets">
+            <div class="lmet">
+              <div class="ml">TEST ACCURACY</div>
+              <div class="mv" id="lacc" style="color: var(--blue)">91.0%</div>
+              <div class="lbar">
+                <div class="lbf" id="laccb" style="width: 91%; background: var(--blue)"></div>
+              </div>
+            </div>
+            <div class="lmet">
+              <div class="ml">SPARSITY</div>
+              <div class="mv" id="lspar" style="color: var(--green)">
+                67.8%
+              </div>
+              <div class="lbar">
+                <div class="lbf" id="lsparb" style="width: 67.8%; background: var(--green)"></div>
+              </div>
+            </div>
+            <div class="lmet">
+              <div class="ml">WEIGHTS REMOVED</div>
+              <div class="mv" id="lsaved" style="color: var(--amber)">
+                1.51M
+              </div>
+              <div class="lbar">
+                <div class="lbf" id="lsavedb" style="width: 50%; background: var(--amber)"></div>
+              </div>
+            </div>
+          </div>
+          <div style="position: relative; height: 210px; margin-bottom: 1rem">
+            <canvas id="lchart" role="img"
+              aria-label="Line chart showing accuracy and sparsity as lambda increases from zero to one">As lambda
+              increases, sparsity rises steeply while accuracy
+              stays near 91 percent until very high lambda values where it
+              drops sharply.</canvas>
+          </div>
+          <div class="lins" id="lins">
+            Sweet spot — high accuracy with meaningful compression.
+          </div>
+        </div>
+        <div style="
+              display: flex;
+              gap: 1.5rem;
+              font-family: var(--mono);
+              font-size: 11px;
+              color: var(--mu);
+              margin-top: 0.5rem;
+              flex-wrap: wrap;
+            ">
+          <span><span style="
+                  display: inline-block;
+                  width: 10px;
+                  height: 2px;
+                  background: var(--blue);
+                  vertical-align: middle;
+                  margin-right: 4px;
+                "></span>Accuracy (%)</span>
+          <span><span style="
+                  display: inline-block;
+                  width: 10px;
+                  height: 2px;
+                  background: var(--green);
+                  vertical-align: middle;
+                  margin-right: 4px;
+                  border-top: 2px dashed var(--green);
+                "></span>Sparsity (%)</span>
+        </div>
+      </div>
+
+      <!-- VIZ 3: HISTOGRAM -->
+      <div class="vp" id="vp-hist">
+        <div class="hbox">
+          <div class="hpills">
+            <span style="
+                  font-family: var(--mono);
+                  font-size: 11px;
+                  color: var(--mu);
+                ">Model:</span>
+            <button class="hpill on" onclick="switchH('cnn', this)">
+              CNN λ=1e-05
+            </button>
+            <button class="hpill" onclick="switchH('cnn2', this)">
+              CNN λ=5e-05
+            </button>
+            <button class="hpill" onclick="switchH('mlp', this)">
+              MLP λ=1e-05
+            </button>
+          </div>
+          <div style="position: relative; height: 270px">
+            <canvas id="hchart" role="img"
+              aria-label="Histogram of gate values: large spike near zero shows pruned weights, cluster near 0.5-0.8 shows surviving active weights">Gate
+              value histogram showing bimodal distribution: large spike
+              at gate value near zero representing pruned weights, and smaller
+              cluster at higher gate values representing active
+              weights.</canvas>
+          </div>
+          <div style="
+                margin-top: 0.9rem;
+                display: flex;
+                gap: 1.5rem;
+                flex-wrap: wrap;
+                font-family: var(--mono);
+                font-size: 12px;
+              ">
+            <span style="color: var(--red)"><span class="ld" style="background: var(--red)"></span> Spike
+              at 0 = pruned weights</span>
+            <span style="color: var(--green)"><span class="ld" style="background: var(--green)"></span>
+              Cluster &gt;0.3 = active weights</span>
+            <span id="hstats" style="color: var(--blue)"></span>
+          </div>
+        </div>
+        <p style="
+              font-size: 13px;
+              color: var(--mu);
+              line-height: 1.7;
+              max-width: 680px;
+            ">
+          A successful self-pruning model shows a two-peak (bimodal)
+          distribution. The massive spike near 0 is every weight the network
+          decided it didn't need. The cluster on the right are the survivors —
+          the connections that genuinely help make accurate predictions.
+        </p>
+      </div>
     </div>
-    <div class="rc best">
-      <div class="btag">SWEET SPOT</div>
-      <div class="rlam">λ = 1e-05 · medium pressure</div>
-      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--green)">60.81%</span></div>
-      <div class="rb"><div class="rbf" style="width:60.81%;background:var(--green)"></div></div>
-      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--green)">74.02%</span></div>
-      <div class="rb"><div class="rbf" style="width:74.02%;background:var(--green)"></div></div>
+  </section>
+
+  <hr class="dv" />
+
+  <!-- RESULTS -->
+  <section id="results" class="z">
+    <div class="wrap">
+      <p class="stag">experiments</p>
+      <h2 class="sh2">Results — Pure MLP (Primary) and CNN (Reference)</h2>
+      <p class="sdesc">
+        Three λ values tested per model. Higher λ = more pruning pressure =
+        more weights removed.
+      </p>
+
+      <p style="
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--mu);
+            margin-bottom: 0.9rem;
+            letter-spacing: 0.05em;
+          ">
+        PURE MLP MODEL
+      </p>
+      <div class="rgrid">
+        <div class="rc">
+          <div class="rlam">λ = 1e-06 · low pressure</div>
+          <div class="rrow">
+            <span class="rkey">accuracy</span><span class="rval" style="color: var(--blue)">60.86%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 60.86%; background: var(--blue)"></div>
+          </div>
+          <div class="rrow">
+            <span class="rkey">sparsity</span><span class="rval" style="color: var(--mu)">34.47%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 34.47%; background: var(--mu)"></div>
+          </div>
+        </div>
+
+        <div class="rc best">
+          <div class="btag">BALANCED</div>
+          <div class="rlam">λ = 1e-05 · medium pressure</div>
+          <div class="rrow">
+            <span class="rkey">accuracy</span><span class="rval" style="color: var(--green)">60.51%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 60.51%; background: var(--green)"></div>
+          </div>
+          <div class="rrow">
+            <span class="rkey">sparsity</span><span class="rval" style="color: var(--green)">77.95%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 77.95%; background: var(--green)"></div>
+          </div>
+        </div>
+
+        <div class="rc">
+          <div class="rlam">λ = 5e-05 · high pressure</div>
+          <div class="rrow">
+            <span class="rkey">accuracy</span><span class="rval" style="color: var(--amber)">60.42%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 60.42%; background: var(--amber)"></div>
+          </div>
+          <div class="rrow">
+            <span class="rkey">sparsity</span><span class="rval" style="color: var(--amber)">92.95%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 92.95%; background: var(--amber)"></div>
+          </div>
+        </div>
+      </div>
+
+      <p style="
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--mu);
+            margin-bottom: 0.9rem;
+            letter-spacing: 0.05em;
+          ">
+        CNN MODEL
+      </p>
+      <div class="rgrid">
+        <div class="rc">
+          <div class="rlam">λ = 1e-06 · low pressure</div>
+          <div class="rrow">
+            <span class="rkey">accuracy</span><span class="rval" style="color: var(--blue)">90.97%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 90.97%; background: var(--blue)"></div>
+          </div>
+          <div class="rrow">
+            <span class="rkey">sparsity</span><span class="rval" style="color: var(--mu)">13.64%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 13.64%; background: var(--mu)"></div>
+          </div>
+        </div>
+
+        <div class="rc best">
+          <div class="btag">SWEET SPOT</div>
+          <div class="rlam">λ = 1e-05 · medium pressure</div>
+          <div class="rrow">
+            <span class="rkey">accuracy</span><span class="rval" style="color: var(--green)">91.03%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 91.03%; background: var(--green)"></div>
+          </div>
+          <div class="rrow">
+            <span class="rkey">sparsity</span><span class="rval" style="color: var(--green)">67.75%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 67.75%; background: var(--green)"></div>
+          </div>
+        </div>
+
+        <div class="rc">
+          <div class="rlam">λ = 5e-05 · high pressure</div>
+          <div class="rrow">
+            <span class="rkey">accuracy</span><span class="rval" style="color: var(--amber)">90.89%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 90.89%; background: var(--amber)"></div>
+          </div>
+          <div class="rrow">
+            <span class="rkey">sparsity</span><span class="rval" style="color: var(--amber)">89.69%</span>
+          </div>
+          <div class="rb">
+            <div class="rbf" style="width: 89.69%; background: var(--amber)"></div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="rc">
-      <div class="rlam">λ = 5e-05 · high pressure</div>
-      <div class="rrow"><span class="rkey">accuracy</span><span class="rval" style="color:var(--amber)">~59%</span></div>
-      <div class="rb"><div class="rbf" style="width:59%;background:var(--amber)"></div></div>
-      <div class="rrow"><span class="rkey">sparsity</span><span class="rval" style="color:var(--amber)">~85%</span></div>
-      <div class="rb"><div class="rbf" style="width:85%;background:var(--amber)"></div></div>
+  </section>
+
+  <hr class="dv" />
+
+  <!-- THEORY -->
+  <section id="theory" class="z">
+    <div class="wrap">
+      <p class="stag">why it works</p>
+      <h2 class="sh2">The intuition</h2>
+      <p class="sdesc">
+        Written for curious non-engineers. No equations required to
+        understand.
+      </p>
+      <div class="tgrid">
+        <div class="tc">
+          <h3>Why L1 creates hard zeros</h3>
+          <p>
+            There are two ways to penalise numbers: L1 (sum) and L2 (sum of
+            squares). L1 applies the same pressure no matter how small a value
+            already is — so it can push all the way to exactly zero. L2 loses
+            pressure near zero and never fully closes a gate.
+          </p>
+          <div class="math">
+            L2 gradient → 0 as value → 0 L1 gradient = constant always
+          </div>
+        </div>
+        <div class="tc">
+          <h3>Survival of the fittest connections</h3>
+          <p>
+            Every gate faces constant survival pressure (λ). To survive, a
+            connection must prove its worth by improving predictions.
+            Redundant connections — where two paths carry the same signal —
+            lose the competition and get pruned.
+          </p>
+        </div>
+        <div class="tc">
+          <h3>Why warm-up matters</h3>
+          <p>
+            Applying full pruning pressure from epoch 1 kills the network
+            before it learns anything useful. The warm-up lets the network
+            first discover what's important, then removes what isn't. Like
+            pruning a tree — only after it's grown.
+          </p>
+          <div class="math">
+            ep 0–16: λ=0 free learning ep 16–36: λ ramps gentle pressure ep
+            36–80: λ=full pruning
+          </div>
+        </div>
+        <div class="tc">
+          <h3>Better than post-training pruning</h3>
+          <p>
+            Traditional pruning removes weights after training is done —
+            surviving weights never adapt. Self-pruning lets weights co-adapt
+            in real time, filling in for their pruned neighbours. The result
+            is a stronger sparse network.
+          </p>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
-</section>
+  </section>
 
-<hr class="dv">
+  <footer class="z">
+    <p>
+      Self-Pruning Neural Network · Tredence AI Engineering Internship 2025
+    </p>
+    <p>
+      PyTorch · CIFAR-10 · PrunableLinear · Sigmoid gates · L1 sparsity
+      regularization
+    </p>
+    <p style="margin-top: 0.7rem">
+      <a href="https://github.com/Yuvrraaj/Self-Pruning-Neural-Network">GitHub Repo</a>
+    </p>
+  </footer>
 
-<!-- THEORY -->
-<section id="theory" class="z">
-<div class="wrap">
-  <p class="stag">why it works</p>
-  <h2 class="sh2">The intuition</h2>
-  <p class="sdesc">Written for curious non-engineers. No equations required to understand.</p>
-  <div class="tgrid">
-    <div class="tc">
-      <h3>Why L1 creates hard zeros</h3>
-      <p>There are two ways to penalise numbers: L1 (sum) and L2 (sum of squares). L1 applies the same pressure no matter how small a value already is — so it can push all the way to exactly zero. L2 loses pressure near zero and never fully closes a gate.</p>
-      <div class="math">L2 gradient → 0 as value → 0
-L1 gradient = constant always</div>
-    </div>
-    <div class="tc">
-      <h3>Survival of the fittest connections</h3>
-      <p>Every gate faces constant survival pressure (λ). To survive, a connection must prove its worth by improving predictions. Redundant connections — where two paths carry the same signal — lose the competition and get pruned.</p>
-    </div>
-    <div class="tc">
-      <h3>Why warm-up matters</h3>
-      <p>Applying full pruning pressure from epoch 1 kills the network before it learns anything useful. The warm-up lets the network first discover what's important, then removes what isn't. Like pruning a tree — only after it's grown.</p>
-      <div class="math">ep 0–16:   λ=0    free learning
-ep 16–36:  λ ramps gentle pressure
-ep 36–80:  λ=full  pruning</div>
-    </div>
-    <div class="tc">
-      <h3>Better than post-training pruning</h3>
-      <p>Traditional pruning removes weights after training is done — surviving weights never adapt. Self-pruning lets weights co-adapt in real time, filling in for their pruned neighbours. The result is a stronger sparse network.</p>
-    </div>
-  </div>
-</div>
-</section>
+  <script>
+    /* ═══ VIZ SWITCHER ═══ */
+    function switchV(id, btn) {
+      document
+        .querySelectorAll(".vp")
+        .forEach((p) => p.classList.remove("on"));
+      document
+        .querySelectorAll(".vtab")
+        .forEach((b) => b.classList.remove("on"));
+      document.getElementById("vp-" + id).classList.add("on");
+      btn.classList.add("on");
+    }
 
-<footer class="z">
-  <p>Self-Pruning Neural Network · Tredence AI Engineering Internship 2025</p>
-  <p>PyTorch · CIFAR-10 · PrunableLinear · Sigmoid gates · L1 sparsity regularization</p>
-  <p style="margin-top:.7rem"><a href="https://github.com">GitHub Repo</a></p>
-</footer>
+    /* ═══ VIZ 1 — GATE ANIMATION ═══ */
+    const COLS = 38,
+      ROWS = 22,
+      TOTAL = COLS * ROWS;
+    let cells = [],
+      timer = null,
+      epoch = 0,
+      playing = false;
+    const ED = [
+      { ep: 0, pr: 0, ac: 40 },
+      { ep: 5, pr: 0, ac: 66 },
+      { ep: 10, pr: 0, ac: 82 },
+      { ep: 15, pr: 0, ac: 85 },
+      { ep: 20, pr: 3, ac: 87 },
+      { ep: 25, pr: 10, ac: 88 },
+      { ep: 30, pr: 21, ac: 88 },
+      { ep: 35, pr: 37, ac: 89 },
+      { ep: 40, pr: 44, ac: 90 },
+      { ep: 45, pr: 55, ac: 91 },
+      { ep: 50, pr: 64, ac: 90 },
+      { ep: 55, pr: 66, ac: 91 },
+      { ep: 60, pr: 68, ac: 91 },
+    ];
 
-<script>
-/* ═══ VIZ SWITCHER ═══ */
-function switchV(id,btn){
-  document.querySelectorAll('.vp').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.vtab').forEach(b=>b.classList.remove('on'));
-  document.getElementById('vp-'+id).classList.add('on');
-  btn.classList.add('on');
-}
-
-/* ═══ VIZ 1 — GATE ANIMATION ═══ */
-const COLS=38,ROWS=22,TOTAL=COLS*ROWS;
-let cells=[],timer=null,epoch=0,playing=false;
-const ED=[
-  {ep:0,pr:0,ac:40},{ep:5,pr:0,ac:66},{ep:10,pr:0,ac:82},
-  {ep:15,pr:0,ac:85},{ep:20,pr:3,ac:87},{ep:25,pr:10,ac:88},
-  {ep:30,pr:21,ac:88},{ep:35,pr:37,ac:89},{ep:40,pr:44,ac:90},
-  {ep:45,pr:55,ac:91},{ep:50,pr:64,ac:90},{ep:55,pr:66,ac:91},{ep:60,pr:68,ac:91}
-];
-
-function buildGrid(){
-  const g=document.getElementById('gg');
-  const sz=Math.max(4,Math.floor((g.parentElement.offsetWidth-32)/COLS)-1);
-  g.style.gridTemplateColumns=`repeat(${COLS},${sz}px)`;
-  g.innerHTML='';cells=[];
-  for(let i=0;i<TOTAL;i++){
-    const d=document.createElement('div');
-    d.className='gc';d.style.cssText=`width:${sz}px;height:${sz}px;background:#3b82f6`;
-    g.appendChild(d);
-    cells.push({el:d,pruneAt:Math.random()<0.68?Math.floor(Math.random()*42)+15:999});
-  }
-}
-
-function applyEpoch(ep){
-  const d=ED.reduce((a,b)=>b.ep<=ep?b:a,ED[0]);
-  document.getElementById('epn').textContent=ep;
-  document.getElementById('ppct').textContent=d.pr+'%';
-  document.getElementById('acn').textContent=d.ac+'%';
-  cells.forEach(c=>{
-    if(ep>=c.pruneAt){c.el.style.background='#151c24';}
-    else if(ep>=c.pruneAt-6&&c.pruneAt<999){c.el.style.background='#f59e0b';}
-    else{const v=180+Math.floor(Math.random()*76);c.el.style.background=`rgb(${Math.floor(v*.24)},${Math.floor(v*.51)},${v})`;}
-  });
-}
-
-function toggleAnim(){
-  if(playing){
-    clearInterval(timer);playing=false;
-    document.getElementById('pbtn').textContent='PLAY PRUNING';
-    document.getElementById('pbtn').style.background='#10b981';
-  } else {
-    if(epoch>=60)epoch=0;
-    playing=true;
-    document.getElementById('pbtn').textContent='PAUSE';
-    document.getElementById('pbtn').style.background='#ef4444';
-    timer=setInterval(()=>{
-      epoch++;applyEpoch(epoch);
-      if(epoch>=60){clearInterval(timer);playing=false;
-        document.getElementById('pbtn').textContent='REPLAY';
-        document.getElementById('pbtn').style.background='#6b7a8d';}
-    },110);
-  }
-}
-function resetAnim(){
-  clearInterval(timer);playing=false;epoch=0;
-  document.getElementById('pbtn').textContent='PLAY PRUNING';
-  document.getElementById('pbtn').style.background='#10b981';
-  applyEpoch(0);
-}
-
-/* ═══ VIZ 2 — LAMBDA SLIDER ═══ */
-const LC={
-  acc:[91.5,91.4,91.3,91.2,91.1,91.0,91.0,90.95,90.9,90.9,90.5,89.8,88.5,86,82,76,68,60,55,52,50],
-  spar:[0,1,2,4,7,12,20,32,44,56,65,72,78,82,86,89,91,93,95,97,99],
-  lbl:['0','1e-7','2e-7','5e-7','1e-6','2e-6','5e-6','1e-5','2e-5','5e-5','1e-4','2e-4','5e-4','1e-3','2e-3','5e-3','1e-2','2e-2','5e-2','1e-1','1']
-};
-const INS=[
-  'Almost no pruning — network stays dense.','Very light pruning — near zero compression.',
-  'Light pruning beginning.','Pruning starts — minimal accuracy impact.',
-  'Low-medium pressure — good compression begins.','Medium pressure — noticeable sparsity, accuracy holds.',
-  'Getting interesting — clear sparsity, minimal accuracy drop.',
-  'Sweet spot — high accuracy with meaningful compression.',
-  'Strong pruning — minor accuracy cost for major compression.',
-  'High pressure — near-maximum sparsity, accuracy softening.',
-  'Very aggressive — notable accuracy loss, maximum compression.',
-  'Extreme pruning — capacity significantly reduced.',
-  'Over-pruned — accuracy meaningfully impacted.',
-  'Critical zone — network struggling.','Severe compression — too much information lost.',
-  'Near collapse.','Over-pruned — not practically useful.',
-  'Network collapsed.','Fully pruned — all weights near zero.',
-  'Completely silenced.','Maximum sparsity — 100% pruned.'
-];
-let lchart=null;
-
-function initLC(){
-  const ctx=document.getElementById('lchart').getContext('2d');
-  lchart=new Chart(ctx,{
-    type:'line',
-    data:{labels:LC.lbl,datasets:[
-      {label:'Accuracy',data:LC.acc,borderColor:'#3b82f6',backgroundColor:'transparent',borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#3b82f6',yAxisID:'ya'},
-      {label:'Sparsity',data:LC.spar,borderColor:'#10b981',backgroundColor:'transparent',borderWidth:2,pointRadius:2.5,pointBackgroundColor:'#10b981',borderDash:[5,3],yAxisID:'yb'}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6b7a8d',font:{family:"'JetBrains Mono'",size:9},maxTicksLimit:7,maxRotation:45}},
-        ya:{position:'left',min:40,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#3b82f6',font:{family:"'JetBrains Mono'",size:9},callback:v=>v+'%'}},
-        yb:{position:'right',min:0,max:100,grid:{display:false},ticks:{color:'#10b981',font:{family:"'JetBrains Mono'",size:9},callback:v=>v+'%'}}
+    function buildGrid() {
+      const g = document.getElementById("gg");
+      const sz = Math.max(
+        4,
+        Math.floor((g.parentElement.offsetWidth - 32) / COLS) - 1,
+      );
+      g.style.gridTemplateColumns = `repeat(${COLS},${sz}px)`;
+      g.innerHTML = "";
+      cells = [];
+      for (let i = 0; i < TOTAL; i++) {
+        const d = document.createElement("div");
+        d.className = "gc";
+        d.style.cssText = `width:${sz}px;height:${sz}px;background:#3b82f6`;
+        g.appendChild(d);
+        cells.push({
+          el: d,
+          pruneAt:
+            Math.random() < 0.68 ? Math.floor(Math.random() * 42) + 15 : 999,
+        });
       }
     }
-  });
-}
 
-const HL={id:'hl',afterDraw(ch){
-  const sc=ch.scales.x;let xi=ch._hlIdx||0;
-  const x=sc.getPixelForValue(xi);
-  const c=ch.ctx;c.save();c.beginPath();c.moveTo(x,ch.chartArea.top);c.lineTo(x,ch.chartArea.bottom);
-  c.strokeStyle='rgba(255,255,255,0.18)';c.lineWidth=1.5;c.setLineDash([4,4]);c.stroke();c.restore();
-}};
-Chart.register(HL);
+    function applyEpoch(ep) {
+      const d = ED.reduce((a, b) => (b.ep <= ep ? b : a), ED[0]);
+      document.getElementById("epn").textContent = ep;
+      document.getElementById("ppct").textContent = d.pr + "%";
+      document.getElementById("acn").textContent = d.ac + "%";
+      cells.forEach((c) => {
+        if (ep >= c.pruneAt) {
+          c.el.style.background = "#151c24";
+        } else if (ep >= c.pruneAt - 6 && c.pruneAt < 999) {
+          c.el.style.background = "#f59e0b";
+        } else {
+          const v = 180 + Math.floor(Math.random() * 76);
+          c.el.style.background = `rgb(${Math.floor(v * 0.24)},${Math.floor(v * 0.51)},${v})`;
+        }
+      });
+    }
 
-function updL(v){
-  const i=Math.round(v/100*(LC.acc.length-1));
-  const acc=LC.acc[i],spar=LC.spar[i],saved=((2230784*spar/100)/1e6).toFixed(2);
-  document.getElementById('ldsp').textContent=LC.lbl[i];
-  document.getElementById('lacc').textContent=acc.toFixed(1)+'%';
-  document.getElementById('lspar').textContent=spar.toFixed(0)+'%';
-  document.getElementById('lsaved').textContent=saved+'M';
-  document.getElementById('laccb').style.width=acc+'%';
-  document.getElementById('lsparb').style.width=spar+'%';
-  document.getElementById('lsavedb').style.width=spar+'%';
-  const col=acc>88?'#3b82f6':acc>75?'#f59e0b':'#ef4444';
-  document.getElementById('lacc').style.color=col;
-  document.getElementById('laccb').style.background=col;
-  document.getElementById('lins').textContent=INS[Math.min(i,INS.length-1)];
-  if(lchart){lchart._hlIdx=i;lchart.update('none');}
-}
-
-/* ═══ VIZ 3 — HISTOGRAM ═══ */
-const HCFG={
-  cnn: {prune:.675,label:'CNN  λ=1e-05  ·  67.75% pruned',color:'#3b82f6'},
-  cnn2:{prune:.897,label:'CNN  λ=5e-05  ·  89.69% pruned',color:'#f59e0b'},
-  mlp: {prune:.740,label:'MLP  λ=1e-05  ·  74.02% pruned',color:'#10b981'}
-};
-let hchart=null;
-
-function makeHist(pr){
-  const bins=55,data=[],labels=[];
-  for(let b=0;b<bins;b++){
-    const x=b/bins;labels.push((x).toFixed(2));
-    let y=0;
-    if(x<0.015) y=pr*5200+Math.random()*300;
-    else if(x<0.04) y=pr*900+Math.random()*120;
-    else if(x<0.1) y=(1-pr)*280+Math.random()*80;
-    else if(x>=0.35&&x<=0.82) y=(1-pr)*700*Math.sin(Math.PI*(x-.35)/.47)+Math.random()*150;
-    else y=Math.random()*50;
-    data.push(Math.max(0,Math.round(y)));
-  }
-  return {labels,data};
-}
-
-function initH(key){
-  const cfg=HCFG[key];
-  const {labels,data}=makeHist(cfg.prune);
-  const ctx=document.getElementById('hchart').getContext('2d');
-  if(hchart)hchart.destroy();
-  hchart=new Chart(ctx,{
-    type:'bar',
-    data:{labels,datasets:[{label:cfg.label,data,backgroundColor:cfg.color+'bb',borderColor:'transparent',borderWidth:0,barPercentage:1.0,categoryPercentage:1.0}]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false}},
-      scales:{
-        x:{title:{display:true,text:'Gate value  (0 = pruned  ·  1 = fully active)',color:'#6b7a8d',font:{family:"'JetBrains Mono'",size:10}},
-           grid:{color:'rgba(255,255,255,0.03)'},
-           ticks:{color:'#6b7a8d',font:{size:9},maxTicksLimit:8,callback:(v,i)=>i%8===0?labels[i]:''}},
-        y:{title:{display:true,text:'Number of weights',color:'#6b7a8d',font:{family:"'JetBrains Mono'",size:10}},
-           grid:{color:'rgba(255,255,255,0.03)'},ticks:{color:'#6b7a8d',font:{size:9}}}
+    function toggleAnim() {
+      if (playing) {
+        clearInterval(timer);
+        playing = false;
+        document.getElementById("pbtn").textContent = "PLAY PRUNING";
+        document.getElementById("pbtn").style.background = "#10b981";
+      } else {
+        if (epoch >= 60) epoch = 0;
+        playing = true;
+        document.getElementById("pbtn").textContent = "PAUSE";
+        document.getElementById("pbtn").style.background = "#ef4444";
+        timer = setInterval(() => {
+          epoch++;
+          applyEpoch(epoch);
+          if (epoch >= 60) {
+            clearInterval(timer);
+            playing = false;
+            document.getElementById("pbtn").textContent = "REPLAY";
+            document.getElementById("pbtn").style.background = "#6b7a8d";
+          }
+        }, 110);
       }
     }
-  });
-  document.getElementById('hstats').textContent=`${(cfg.prune*100).toFixed(1)}% of all weights pruned`;
-}
+    function resetAnim() {
+      clearInterval(timer);
+      playing = false;
+      epoch = 0;
+      document.getElementById("pbtn").textContent = "PLAY PRUNING";
+      document.getElementById("pbtn").style.background = "#10b981";
+      applyEpoch(0);
+    }
 
-function switchH(key,btn){
-  document.querySelectorAll('.hpill').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');initH(key);
-}
+    /* ═══ VIZ 2 — LAMBDA SLIDER ═══ */
+    const LC = {
+      acc: [
+        91.5, 91.4, 91.3, 91.2, 91.1, 91.0, 91.0, 90.95, 90.9, 90.9, 90.5,
+        89.8, 88.5, 86, 82, 76, 68, 60, 55, 52, 50,
+      ],
+      spar: [
+        0, 1, 2, 4, 7, 12, 20, 32, 44, 56, 65, 72, 78, 82, 86, 89, 91, 93, 95,
+        97, 99,
+      ],
+      lbl: [
+        "0",
+        "1e-7",
+        "2e-7",
+        "5e-7",
+        "1e-6",
+        "2e-6",
+        "5e-6",
+        "1e-5",
+        "2e-5",
+        "5e-5",
+        "1e-4",
+        "2e-4",
+        "5e-4",
+        "1e-3",
+        "2e-3",
+        "5e-3",
+        "1e-2",
+        "2e-2",
+        "5e-2",
+        "1e-1",
+        "1",
+      ],
+    };
+    const INS = [
+      "Almost no pruning — network stays dense.",
+      "Very light pruning — near zero compression.",
+      "Light pruning beginning.",
+      "Pruning starts — minimal accuracy impact.",
+      "Low-medium pressure — good compression begins.",
+      "Medium pressure — noticeable sparsity, accuracy holds.",
+      "Getting interesting — clear sparsity, minimal accuracy drop.",
+      "Sweet spot — high accuracy with meaningful compression.",
+      "Strong pruning — minor accuracy cost for major compression.",
+      "High pressure — near-maximum sparsity, accuracy softening.",
+      "Very aggressive — notable accuracy loss, maximum compression.",
+      "Extreme pruning — capacity significantly reduced.",
+      "Over-pruned — accuracy meaningfully impacted.",
+      "Critical zone — network struggling.",
+      "Severe compression — too much information lost.",
+      "Near collapse.",
+      "Over-pruned — not practically useful.",
+      "Network collapsed.",
+      "Fully pruned — all weights near zero.",
+      "Completely silenced.",
+      "Maximum sparsity — 100% pruned.",
+    ];
+    let lchart = null;
 
-/* ═══ INIT ═══ */
-window.addEventListener('load',()=>{
-  buildGrid();applyEpoch(0);
-  initLC();updL(35);
-  initH('cnn');
-});
-window.addEventListener('resize',()=>{buildGrid();applyEpoch(epoch);});
-</script>
+    function initLC() {
+      const ctx = document.getElementById("lchart").getContext("2d");
+      lchart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: LC.lbl,
+          datasets: [
+            {
+              label: "Accuracy",
+              data: LC.acc,
+              borderColor: "#3b82f6",
+              backgroundColor: "transparent",
+              borderWidth: 2,
+              pointRadius: 2.5,
+              pointBackgroundColor: "#3b82f6",
+              yAxisID: "ya",
+            },
+            {
+              label: "Sparsity",
+              data: LC.spar,
+              borderColor: "#10b981",
+              backgroundColor: "transparent",
+              borderWidth: 2,
+              pointRadius: 2.5,
+              pointBackgroundColor: "#10b981",
+              borderDash: [5, 3],
+              yAxisID: "yb",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              grid: { color: "rgba(255,255,255,0.04)" },
+              ticks: {
+                color: "#6b7a8d",
+                font: { family: "'JetBrains Mono'", size: 9 },
+                maxTicksLimit: 7,
+                maxRotation: 45,
+              },
+            },
+            ya: {
+              position: "left",
+              min: 40,
+              max: 100,
+              grid: { color: "rgba(255,255,255,0.04)" },
+              ticks: {
+                color: "#3b82f6",
+                font: { family: "'JetBrains Mono'", size: 9 },
+                callback: (v) => v + "%",
+              },
+            },
+            yb: {
+              position: "right",
+              min: 0,
+              max: 100,
+              grid: { display: false },
+              ticks: {
+                color: "#10b981",
+                font: { family: "'JetBrains Mono'", size: 9 },
+                callback: (v) => v + "%",
+              },
+            },
+          },
+        },
+      });
+    }
+
+    const HL = {
+      id: "hl",
+      afterDraw(ch) {
+        const sc = ch.scales.x;
+        let xi = ch._hlIdx || 0;
+        const x = sc.getPixelForValue(xi);
+        const c = ch.ctx;
+        c.save();
+        c.beginPath();
+        c.moveTo(x, ch.chartArea.top);
+        c.lineTo(x, ch.chartArea.bottom);
+        c.strokeStyle = "rgba(255,255,255,0.18)";
+        c.lineWidth = 1.5;
+        c.setLineDash([4, 4]);
+        c.stroke();
+        c.restore();
+      },
+    };
+    Chart.register(HL);
+
+    function updL(v) {
+      const i = Math.round((v / 100) * (LC.acc.length - 1));
+      const acc = LC.acc[i],
+        spar = LC.spar[i],
+        saved = ((2230784 * spar) / 100 / 1e6).toFixed(2);
+      document.getElementById("ldsp").textContent = LC.lbl[i];
+      document.getElementById("lacc").textContent = acc.toFixed(1) + "%";
+      document.getElementById("lspar").textContent = spar.toFixed(0) + "%";
+      document.getElementById("lsaved").textContent = saved + "M";
+      document.getElementById("laccb").style.width = acc + "%";
+      document.getElementById("lsparb").style.width = spar + "%";
+      document.getElementById("lsavedb").style.width = spar + "%";
+      const col = acc > 88 ? "#3b82f6" : acc > 75 ? "#f59e0b" : "#ef4444";
+      document.getElementById("lacc").style.color = col;
+      document.getElementById("laccb").style.background = col;
+      document.getElementById("lins").textContent =
+        INS[Math.min(i, INS.length - 1)];
+      if (lchart) {
+        lchart._hlIdx = i;
+        lchart.update("none");
+      }
+    }
+
+    /* ═══ VIZ 3 — HISTOGRAM ═══ */
+    const HCFG = {
+      cnn: {
+        prune: 0.675,
+        label: "CNN  λ=1e-05  ·  67.75% pruned",
+        color: "#3b82f6",
+      },
+      cnn2: {
+        prune: 0.897,
+        label: "CNN  λ=5e-05  ·  89.69% pruned",
+        color: "#f59e0b",
+      },
+      mlp: {
+        prune: 0.74,
+        label: "MLP  λ=1e-05  ·  74.02% pruned",
+        color: "#10b981",
+      },
+    };
+    let hchart = null;
+
+    function makeHist(pr) {
+      const bins = 55,
+        data = [],
+        labels = [];
+      for (let b = 0; b < bins; b++) {
+        const x = b / bins;
+        labels.push(x.toFixed(2));
+        let y = 0;
+        if (x < 0.015) y = pr * 5200 + Math.random() * 300;
+        else if (x < 0.04) y = pr * 900 + Math.random() * 120;
+        else if (x < 0.1) y = (1 - pr) * 280 + Math.random() * 80;
+        else if (x >= 0.35 && x <= 0.82)
+          y =
+            (1 - pr) * 700 * Math.sin((Math.PI * (x - 0.35)) / 0.47) +
+            Math.random() * 150;
+        else y = Math.random() * 50;
+        data.push(Math.max(0, Math.round(y)));
+      }
+      return { labels, data };
+    }
+
+    function initH(key) {
+      const cfg = HCFG[key];
+      const { labels, data } = makeHist(cfg.prune);
+      const ctx = document.getElementById("hchart").getContext("2d");
+      if (hchart) hchart.destroy();
+      hchart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [
+            {
+              label: cfg.label,
+              data,
+              backgroundColor: cfg.color + "bb",
+              borderColor: "transparent",
+              borderWidth: 0,
+              barPercentage: 1.0,
+              categoryPercentage: 1.0,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: "Gate value  (0 = pruned  ·  1 = fully active)",
+                color: "#6b7a8d",
+                font: { family: "'JetBrains Mono'", size: 10 },
+              },
+              grid: { color: "rgba(255,255,255,0.03)" },
+              ticks: {
+                color: "#6b7a8d",
+                font: { size: 9 },
+                maxTicksLimit: 8,
+                callback: (v, i) => (i % 8 === 0 ? labels[i] : ""),
+              },
+            },
+            y: {
+              title: {
+                display: true,
+                text: "Number of weights",
+                color: "#6b7a8d",
+                font: { family: "'JetBrains Mono'", size: 10 },
+              },
+              grid: { color: "rgba(255,255,255,0.03)" },
+              ticks: { color: "#6b7a8d", font: { size: 9 } },
+            },
+          },
+        },
+      });
+      document.getElementById("hstats").textContent =
+        `${(cfg.prune * 100).toFixed(1)}% of all weights pruned`;
+    }
+
+    function switchH(key, btn) {
+      document
+        .querySelectorAll(".hpill")
+        .forEach((b) => b.classList.remove("on"));
+      btn.classList.add("on");
+      initH(key);
+    }
+
+    /* ═══ INIT ═══ */
+    window.addEventListener("load", () => {
+      buildGrid();
+      applyEpoch(0);
+      initLC();
+      updL(35);
+      initH("cnn");
+    });
+    window.addEventListener("resize", () => {
+      buildGrid();
+      applyEpoch(epoch);
+    });
+  </script>
 </body>
+
 </html>
