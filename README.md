@@ -67,18 +67,18 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 ---
 
 ## Repository Structure
-
+ 
 ```
 .
-├── Self Pruning MLP.ipynb   # Main solution: Pure MLP self-pruning network
-├── Pruning With CNN feature extractor.ipynb             # Bonus solution: CNN + prunable head, Colab/resume support
-├── outputs/                   # Auto-generated after running
-│   ├── gate_distribution.png  # Gate histogram (spike at 0 = successful pruning)
-│   ├── training_curves.png    # Accuracy & sparsity vs epoch for all λ
-│   ├── lambda_tradeoff.png    # Accuracy–Sparsity scatter plot
-│   ├── report.md              # Auto-generated Markdown report
-│   └── model_lam*.pt          # Saved model checkpoints per λ
-└── README.md
+|-- train.py                                    # PRIMARY SUBMISSION: standalone Python script (Pure MLP)
+|-- Self Pruning MLP.ipynb                      # Notebook version of train.py (identical logic)
+|-- Pruning With CNN feature extractor.ipynb    # Bonus: CNN backbone + prunable head, Colab/resume
+|-- README.md
+|-- Outputs/
+    |-- gate_distribution.png                   # Gate histogram (spike at 0 = successful pruning)
+    |-- training_curves.png                     # Accuracy & sparsity vs epoch for all lambda values
+    |-- lambda_tradeoff.png                     # Accuracy-Sparsity scatter plot
+    |-- REPORT.md                               # Auto-generated Markdown report with results table
 ```
 
 ---
