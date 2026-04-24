@@ -1,18 +1,18 @@
-# Self-Pruning Neural Network — CIFAR-10
+# Self-Pruning Neural Network - CIFAR-10
 
 > **Tredence AI Engineering Internship Case Study**
-> A neural network that learns to prune its own weights during training — no post-training step required.
+> A neural network that learns to prune its own weights during training, no post-training step required.
 
 ---
 
-## ⚠️ IMPORTANT — Main Submission Note
+## ⚠️ IMPORTANT - Main Submission Note
 
 > ### `train.py` and `Self Pruning MLP.ipynb` are the **MAIN SUBMISSION**
 >
 > These implement a **pure feed-forward MLP** using only custom `PrunableLinear` layers.
 > **NO CNN is used anywhere in the main submission.**
 >
-> The file `Bonus Solution.ipynb` is a **BONUS exploration only** —
+> The file `Bonus Solution.ipynb` is a **BONUS exploration only** -
 > it was built to study the accuracy ceiling with a CNN backbone and is **NOT part of the evaluated submission.**
 
 ## Live Interactive Demo
@@ -45,7 +45,7 @@ https://yuvrraaj.github.io/Self-Pruning-Neural-Network/
   - [Colab Checkpoint Resume System](#colab-checkpoint-resume-system)
   - [Results](#results-1)
   - [How to Run](#how-to-run-1)
-- [Why L1 Encourages Sparsity — Theory](#why-l1-encourages-sparsity--theory)
+- [Why L1 Encourages Sparsity - Theory](#why-l1-encourages-sparsity--theory)
 - [λ Trade-off Analysis](#λ-trade-off-analysis)
 - [Generated Outputs](#generated-outputs)
 - [Requirements](#requirements)
@@ -54,18 +54,18 @@ https://yuvrraaj.github.io/Self-Pruning-Neural-Network/
 
 ## Overview
 
-This repository contains the solution to the **Self-Pruning Neural Network** case study assigned by Tredence Analytics for their AI Engineering Internship. The task is to build a neural network that actively learns to prune its own weights during the forward/backward pass — not as a post-training compression step, but as an intrinsic part of the training objective.
+This repository contains the solution to the **Self-Pruning Neural Network** case study assigned by Tredence Analytics for their AI Engineering Internship. The task is to build a neural network that actively learns to prune its own weights during the forward/backward pass - not as a post-training compression step, but as an intrinsic part of the training objective.
 
-The core mechanism: every weight in the network is multiplied by a learnable **gate**, a scalar in (0, 1) produced by a sigmoid function. An L1 regularisation term on these gates pushes them toward zero. A gate that reaches zero effectively removes its weight from the network — the connection is pruned.
+The core mechanism: every weight in the network is multiplied by a learnable **gate**, a scalar in (0, 1) produced by a sigmoid function. An L1 regularisation term on these gates pushes them toward zero. A gate that reaches zero effectively removes its weight from the network - the connection is pruned.
 
 Two complete solutions are provided:
  
 | File | Architecture | Purpose |
 |---|---|---|
-| `train.py` + `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Primary submission — required by assignment** |
+| `train.py` + `Self Pruning MLP.ipynb` | **Pure MLP** (5 PrunableLinear layers) | **Primary submission - required by assignment** |
 | `Bonus Solution.ipynb` | **CNN backbone + Prunable classifier head** | Bonus: higher accuracy, Colab-ready with resume |
 
-> **Note on `train.py`:** The assignment asks for a *"single, well-commented Python script"*. `train.py` is exactly that — a direct, clean conversion of `Self Pruning MLP.ipynb` into a standalone runnable script. Both files contain identical logic; `train.py` is the formal submission artifact.
+> **Note on `train.py`:** The assignment asks for a *"single, well-commented Python script"*. `train.py` is exactly that - a direct, clean conversion of `Self Pruning MLP.ipynb` into a standalone runnable script. Both files contain identical logic; `train.py` is the formal submission artifact.
 ---
 
 ## Core Concept
@@ -84,7 +84,7 @@ The total training loss is:
 Total Loss = CrossEntropyLoss(logits, labels)  +  λ × Σ(all gate values)
 ```
 
-The second term — the **L1 norm of all gates** — creates a constant downward pressure on every gate, regardless of its current value. A weight survives only if it is useful enough for classification to overcome this pressure. Otherwise, its gate is driven to zero and the weight is effectively deleted from the network.
+The second term - the **L1 norm of all gates** - creates a constant downward pressure on every gate, regardless of its current value. A weight survives only if it is useful enough for classification to overcome this pressure. Otherwise, its gate is driven to zero and the weight is effectively deleted from the network.
 
 ---
 
@@ -109,7 +109,7 @@ The second term — the **L1 norm of all gates** — creates a constant downward
 
 **Files:** `train.py` (script) · `Self Pruning MLP.ipynb` (notebook)
  
-This is the primary, fully self-contained solution. It uses **no CNN, no convolutional layers anywhere**. Every single linear transformation in the network goes through a `PrunableLinear` layer. This is intentionally the harder path — a pure MLP operating on raw CIFAR-10 pixels — because it most cleanly demonstrates the pruning mechanism without any feature extraction shortcut.
+This is the primary, fully self-contained solution. It uses **no CNN, no convolutional layers anywhere**. Every single linear transformation in the network goes through a `PrunableLinear` layer. This is intentionally the harder path - a pure MLP operating on raw CIFAR-10 pixels - because it most cleanly demonstrates the pruning mechanism without any feature extraction shortcut.
 
 ### Architecture
 
@@ -156,7 +156,7 @@ class PrunableLinear(nn.Module):
 
 **Design decisions:**
 - `gate_init = 2.0` → `sigmoid(2.0) ≈ 0.88`, so gates start mostly open. This gives the network time to learn useful representations before pruning pressure takes effect.
-- `gate_scores` is registered as an `nn.Parameter`, so PyTorch autograd automatically computes gradients for it — no custom backward pass needed.
+- `gate_scores` is registered as an `nn.Parameter`, so PyTorch autograd automatically computes gradients for it - no custom backward pass needed.
 - Gradients flow through both `weight` and `gate_scores` via the element-wise product. The chain rule handles everything:
   - `∂Loss/∂weight = ∂Loss/∂output × gate` (the CE gradient scaled by the gate)
   - `∂Loss/∂gate_scores = ∂Loss/∂output × weight × sigmoid'(gate_scores)` (CE path) + `λ × sigmoid'(gate_scores)` (sparsity path)
@@ -197,13 +197,13 @@ Several design choices work together to achieve both high accuracy and high spar
 Directly applying a large λ from the start would prevent the network from learning anything useful before the sparsity loss crushes all gates. Instead, lambda is introduced in three phases:
 
 ```
-Phase 1 — Warm-up   (epochs  1–16, 20% of total):   λ_eff = 0
+Phase 1 - Warm-up   (epochs  1–16, 20% of total):   λ_eff = 0
            Network trains freely on cross-entropy alone.
 
-Phase 2 — Ramp      (epochs 17–36, next 25%):         λ_eff linearly 0 → λ_target
+Phase 2 - Ramp      (epochs 17–36, next 25%):         λ_eff linearly 0 → λ_target
            Sparsity pressure is introduced gradually.
 
-Phase 3 — Full      (epochs 37–80):                   λ_eff = λ_target
+Phase 3 - Full      (epochs 37–80):                   λ_eff = λ_target
            Full pruning pressure; only important gates survive.
 ```
 
@@ -216,7 +216,7 @@ optimizer = optim.AdamW([
 ])
 ```
 
-Gates get **8× the base learning rate** so they can move fast enough to achieve meaningful sparsity within the 80-epoch budget. Weight decay is set to zero for gate parameters — the L1 sparsity loss already controls them; L2 would cause unintended interactions.
+Gates get **8× the base learning rate** so they can move fast enough to achieve meaningful sparsity within the 80-epoch budget. Weight decay is set to zero for gate parameters - the L1 sparsity loss already controls them; L2 would cause unintended interactions.
 
 **3. CosineAnnealingWarmRestarts Scheduler**
 
@@ -246,7 +246,7 @@ The model state at peak test accuracy is saved throughout training. The final re
 
 ### Results
 
-Training was run for **80 epochs** with **batch size 256** on CIFAR-10 (50,000 train / 10,000 test) across three λ values. Hardware: CUDA GPU. Total parameters: 7,676,042 — of which 3,835,136 are learnable gate parameters.
+Training was run for **80 epochs** with **batch size 256** on CIFAR-10 (50,000 train / 10,000 test) across three λ values. Hardware: CUDA GPU. Total parameters: 7,676,042 - of which 3,835,136 are learnable gate parameters.
 
 | λ (Lambda) | Test Accuracy | Sparsity Level (%) | Accuracy Grade | Sparsity Grade |
 |:---:|:---:|:---:|:---:|:---:|
@@ -270,8 +270,8 @@ Training was run for **80 epochs** with **batch size 256** on CIFAR-10 (50,000 t
 
 **Key observations:**
 - At `λ = 1e-6`, the sparsity penalty is nearly negligible. The network keeps 65.53% of its gates active, behaving close to a dense MLP. Highest accuracy (60.86%), lowest sparsity (34.47%).
-- At `λ = 1e-5`, a meaningful balance is struck — 77.95% of weights pruned with only a 0.35% accuracy drop vs the dense baseline. The network successfully identifies and removes redundant connections.
-- At `λ = 5e-5`, aggressive pruning removes **92.95% of all weights** while retaining 60.42% accuracy — less than 0.44% accuracy degradation from the baseline. This is the standout result: a 93% sparse network that still classifies correctly 3 out of 5 times on a 10-class problem using only raw pixels.
+- At `λ = 1e-5`, a meaningful balance is struck - 77.95% of weights pruned with only a 0.35% accuracy drop vs the dense baseline. The network successfully identifies and removes redundant connections.
+- At `λ = 5e-5`, aggressive pruning removes **92.95% of all weights** while retaining 60.42% accuracy - less than 0.44% accuracy degradation from the baseline. This is the standout result: a 93% sparse network that still classifies correctly 3 out of 5 times on a 10-class problem using only raw pixels.
 - Accuracy is remarkably stable across all three λ values (spread of only ~0.44%), confirming the pruning mechanism correctly identifies redundant weights rather than randomly destroying important ones.
 
 The gate distribution histogram for the best model clearly shows the **bimodal pattern** that indicates successful pruning: a large spike near gate ≈ 0 (pruned connections) and a smaller cluster of surviving gates toward 0.5–1.0.
@@ -280,14 +280,14 @@ The gate distribution histogram for the best model clearly shows the **bimodal p
 
 ### How to Run
  
-**Option A — Script (primary submission artifact):**
+**Option A - Script (primary submission artifact):**
  
 ```bash
 pip install torch torchvision matplotlib numpy
 python train.py
 ```
  
-**Option B — Notebook:**
+**Option B - Notebook:**
  
 ```bash
 jupyter notebook "Self Pruning MLP.ipynb"
@@ -317,7 +317,7 @@ CIFAR-10 downloads automatically on first run (~170 MB). All outputs (plots, rep
 
 **File:** `Bonus Solution.ipynb`
 
-This notebook is a **bonus extension** designed for Google Colab. It uses a CNN backbone for feature extraction paired with a `PrunableLinear` classifier head. The pruning mechanism is identical in principle — the same `PrunableLinear` layer, the same L1 sparsity loss — but the CNN's convolutional layers extract spatial features first, giving the prunable head a much richer representation to work with. This results in significantly higher test accuracy compared to the pure MLP.
+This notebook is a **bonus extension** designed for Google Colab. It uses a CNN backbone for feature extraction paired with a `PrunableLinear` classifier head. The pruning mechanism is identical in principle - the same `PrunableLinear` layer, the same L1 sparsity loss - but the CNN's convolutional layers extract spatial features first, giving the prunable head a much richer representation to work with. This results in significantly higher test accuracy compared to the pure MLP.
 
 ### Architecture
 
@@ -342,7 +342,7 @@ Input: CIFAR-10 image  (3 × 32 × 32)
    PrunableLinear(256  → 10)   →  Logits
 ```
 
-The three `PrunableLinear` layers in the classifier head are the only gated layers. The CNN backbone (convolutional layers) is **not pruned** — it remains a standard feature extractor.
+The three `PrunableLinear` layers in the classifier head are the only gated layers. The CNN backbone (convolutional layers) is **not pruned** - it remains a standard feature extractor.
 
 ---
 
@@ -374,7 +374,7 @@ A major practical addition in this notebook is a full **checkpoint/resume system
 def save_checkpoint(path, payload):
     tmp = path + ".tmp"
     torch.save(payload, tmp)
-    os.replace(tmp, path)   # atomic on POSIX — no partial writes
+    os.replace(tmp, path)   # atomic on POSIX - no partial writes
 ```
 
 **What is saved per epoch:**
@@ -401,7 +401,7 @@ Pointing the output directory to Google Drive ensures all checkpoints persist ac
 
 ### Results
 
-Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware: CUDA GPU. Total parameters: 5,019,850 — of which 2,230,784 are learnable gate parameters (classifier head only).
+Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware: CUDA GPU. Total parameters: 5,019,850 - of which 2,230,784 are learnable gate parameters (classifier head only).
 
 | λ (Lambda) | Test Accuracy | Sparsity Level (%) | Accuracy Grade | Sparsity Grade |
 |:---:|:---:|:---:|:---:|:---:|
@@ -424,10 +424,10 @@ Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware
 | 60 | 5e-5 | 93.53% | 90.89% | 89.69% |
 
 **Key observations:**
-- Accuracy is extraordinarily stable across all three λ values — a spread of only **0.14%** (91.03% down to 90.89%) while sparsity ranges from 13.64% to 89.69%. This is the defining result of the CNN variant.
+- Accuracy is extraordinarily stable across all three λ values - a spread of only **0.14%** (91.03% down to 90.89%) while sparsity ranges from 13.64% to 89.69%. This is the defining result of the CNN variant.
 - At `λ = 5e-5`, **89.69% of all classifier weights are pruned** while maintaining 90.89% test accuracy. The CNN backbone's rich feature representations make the classifier head highly compressible.
 - At `λ = 1e-5`, 67.75% sparsity is achieved with the highest accuracy of all three runs (91.03%), suggesting this is the sweet spot for this architecture.
-- The CNN backbone (convolutional layers, not pruned) is responsible for the dramatic accuracy advantage over the pure MLP — jumping from ~60% to ~91% — confirming that spatial feature extraction is the key bottleneck for raw-pixel CIFAR-10 classification.
+- The CNN backbone (convolutional layers, not pruned) is responsible for the dramatic accuracy advantage over the pure MLP - jumping from ~60% to ~91% - confirming that spatial feature extraction is the key bottleneck for raw-pixel CIFAR-10 classification.
 
 ---
 
@@ -447,7 +447,7 @@ Training was run for **60 epochs** with **batch size 128** on CIFAR-10. Hardware
        output_dir = "/content/drive/MyDrive/selfprune_outputs"
    )
    ```
-4. Run all cells. If the runtime disconnects, simply re-run — training resumes from where it stopped.
+4. Run all cells. If the runtime disconnects, simply re-run - training resumes from where it stopped.
 
 **Locally:**
 ```bash
@@ -459,7 +459,7 @@ Remove the `drive.mount(...)` call at the top and set `output_dir = "./outputs"`
 
 ---
 
-## Why L1 Encourages Sparsity — Theory
+## Why L1 Encourages Sparsity - Theory
 
 This is the mathematical heart of the approach.
 
@@ -485,9 +485,9 @@ But more importantly, the gradient of the entire λ·Σ(gates) term:
 ∂(λ · Σ gates)/∂gate_score  =  λ · gate · (1 − gate)
 ```
 
-For a gate near zero (being pruned), `gate · (1 − gate) ≈ gate` — the gradient is proportional to the gate value, which would slow down as the gate approaches zero (similar to L2 dynamics on the sigmoid output). However, the L1 norm on the gates means the **total loss landscape** still has a "corner" at gate = 0 (in gate-score space), making it optimal for many gates to sit exactly at zero.
+For a gate near zero (being pruned), `gate · (1 − gate) ≈ gate` - the gradient is proportional to the gate value, which would slow down as the gate approaches zero (similar to L2 dynamics on the sigmoid output). However, the L1 norm on the gates means the **total loss landscape** still has a "corner" at gate = 0 (in gate-score space), making it optimal for many gates to sit exactly at zero.
 
-In contrast, an L2 norm `Σ gate²` gives gradient `2λ · gate`, which shrinks to zero as the gate shrinks — providing less and less pressure to fully close the gate. The L1 formulation maintains a more aggressive constant-direction push.
+In contrast, an L2 norm `Σ gate²` gives gradient `2λ · gate`, which shrinks to zero as the gate shrinks - providing less and less pressure to fully close the gate. The L1 formulation maintains a more aggressive constant-direction push.
 
 **The competition:**
 - The **classification gradient** pushes gate scores toward high values for important weights (so the weight has effect on the output and can reduce CE loss).
@@ -544,4 +544,4 @@ Python 3.8+ recommended. A CUDA-capable GPU is strongly recommended for reasonab
 
 ---
 
-*Built as part of the Tredence Analytics AI Engineering Internship Case Study — 2025 Cohort.*
+*Built as part of the Tredence Analytics AI Engineering Internship Case Study - 2025 Cohort.*
